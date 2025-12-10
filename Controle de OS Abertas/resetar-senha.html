@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Redefinir Senha | NormaQ</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background-color: #f3f5f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .card {
+      background: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      width: 360px;
+      text-align: center;
+    }
+    h2 { color: #333; margin-bottom: 10px; }
+    p { color: #555; font-size: 14px; }
+    label { display: block; text-align: left; margin-top: 15px; font-size: 14px; }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      background-color: #1e88e5;
+      color: #fff;
+      border: none;
+      padding: 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover { background-color: #1565c0; }
+    .error { color: #d32f2f; font-size: 14px; margin-top: 10px; }
+    .success { color: #2e7d32; font-size: 14px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Redefinir Senha</h2>
+    <p id="info">Carregando...</p>
+
+    <form id="resetForm" style="display:none">
+      <label for="senha">Nova senha</label>
+      <input id="senha" type="password" minlength="8" placeholder="Digite a nova senha" required />
+
+      <label for="confirm">Confirmar senha</label>
+      <input id="confirm" type="password" minlength="8" placeholder="Confirme a nova senha" required />
+
+      <div id="feedback" class="error" style="display:none"></div>
+
+      <button id="btn" type="submit">Alterar senha</button>
+    </form>
+
+    <p id="msg" style="display:none"></p>
+  </div>
+
+<script>
+(function(){
+  const params = new URLSearchParams(location.search);
+  const token = params.get('token');
+  const uid = params.get('uid');
+  const SUPA_URL = 'https://jnbirdxgllehrikluftu.supabase.co';
+  const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpuYmlyZHhnbGxlaHJpa2x1ZnR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMDcxNTgsImV4cCI6MjA3NjU4MzE1OH0.OG4LjCJFAvOl0IOIrPlL3wZ4f7EeDcO-rUZ3dDIOqi4';
+  const supabaseClient = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  // Verifica se a biblioteca bcryptjs carregou corretamente
+  const bcryptLib = window.bcrypt || (window.dcodeIO && window.dcodeIO.bcrypt);
+
+  const info = document.getElementById('info');
+  const form = document.getElementById('resetForm');
+  const feedback = document.getElementById('feedback');
+  const msg = document.getElementById('msg');
+
+  if(!token && !uid){
+    info.textContent = 'Token/UID ausente. Gere um link na página de login.';
+    return;
+  }
+
+  // Token válido, exibe o formulário
+  info.textContent = 'Informe sua nova senha (link expira em 30 minutos).';
+  form.style.display = 'block';
+
+  form.addEventListener('submit', async function(e){
+    e.preventDefault();
+    feedback.style.display = 'none';
+    msg.style.display = 'none';
+
+    const senha = document.getElementById('senha').value.trim();
+    const confirm = document.getElementById('confirm').value.trim();
+
+    if(senha.length < 8){
+      feedback.textContent = 'A senha deve ter pelo menos 8 caracteres.';
+      feedback.style.display = 'block';
+      return;
+    }
+    if(senha !== confirm){
+      feedback.textContent = 'As senhas não coincidem.';
+      feedback.style.display = 'block';
+      return;
+    }
+
+    try {
+      // Atualiza diretamente a senha do usuário (sempre com bcryptjs)
+      if (!uid) {
+        feedback.textContent = 'UID ausente no link. Gere novamente.';
+        feedback.style.display = 'block';
+        return;
+      }
+      // Garante que a lib de hash está disponível
+      if (!bcryptLib) {
+        feedback.textContent = 'Biblioteca de criptografia indisponível. Verifique sua conexão.';
+        feedback.style.display = 'block';
+        return;
+      }
+      
+      // DEBUG: Verificar se a biblioteca funciona
+      try {
+        const testHash = bcryptLib.hashSync('test', 4);
+        console.log('Teste bcrypt funcionando:', testHash);
+      } catch (e) {
+        console.error('Erro no teste bcrypt:', e);
+        feedback.textContent = 'Erro na biblioteca de criptografia.';
+        feedback.style.display = 'block';
+        return;
+      }
+      
+      let hashed = bcryptLib.hashSync(senha, 10);
+      console.log('Hash gerado:', hashed);
+      
+      // Força prefixo $2b$ para compatibilidade com a verificação no login
+      if (hashed.startsWith('$2a$')) {
+        hashed = '$2b$' + hashed.slice(4);
+        console.log('Hash convertido para $2b$:', hashed);
+      }
+      const { error: updErr } = await supabaseClient
+        .from('usuarios_auth')
+        .update({ senha: hashed })
+        .eq('id', uid);
+
+      if (updErr) {
+        feedback.textContent = updErr.message || 'Erro ao atualizar senha.';
+        feedback.style.display = 'block';
+        return;
+      }
+
+      // Marca token como usado, se existir
+      if (token) {
+        try {
+          await supabaseClient
+            .from('reset_senha_tokens')
+            .update({ usado: true })
+            .eq('token', token);
+        } catch(markErr){ console.warn('Falha ao marcar token como usado:', markErr); }
+      }
+
+      // Sucesso: exibe e redireciona
+      form.style.display = 'none';
+      msg.textContent = 'Senha alterada com sucesso. Redirecionando para login...';
+      msg.className = 'success';
+      msg.style.display = 'block';
+      setTimeout(() => {
+        const next = '/login.html?reset=ok' + (uid ? ('&uid=' + encodeURIComponent(uid)) : '');
+        location.href = next;
+      }, 2500);
+    } catch (err) {
+      feedback.textContent = 'Erro de conexão. Tente novamente.';
+      feedback.style.display = 'block';
+      console.error(err);
+    }
+  });
+})();
+</script>
+</body>
+</html>

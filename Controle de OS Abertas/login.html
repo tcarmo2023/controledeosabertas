@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login | NormaQ</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
+  <style>
+    :root {
+      --primary: #FCB026;
+      --primary-dark: #E5B000;
+      --white: #fff;
+      --text: #333;
+      --muted: #666;
+      --danger: #dc3545;
+      --success: #28a745;
+    }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: url('Nova pasta/Trator_JCB.jpg') no-repeat center center fixed;
+      background-size: cover;
+    }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); }
+    .card {
+      position: relative;
+      z-index: 1;
+      width: 380px;
+      background: rgba(255,255,255,0.95);
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      padding: 24px;
+      text-align: center;
+    }
+    .logo { width: 160px; height: auto; margin: 8px auto 16px auto; display: block; }
+    h1 { font-size: 22px; margin: 8px 0 16px; color: var(--primary); }
+    label { display:block; text-align:left; font-weight:600; font-size: 13px; margin-top:12px; }
+    input { width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; font-size:14px; margin-top:6px; }
+    .btn { width:100%; padding:10px; border:none; border-radius:6px; cursor:pointer; font-weight:700; font-size:14px; margin-top:12px; }
+    .btn-primary { background: var(--primary); color: var(--white); }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-secondary { background:#6c757d; color:#fff; }
+    .btn-secondary:hover { background:#5a6268; }
+    .btn-link { background:transparent; color: var(--primary); text-decoration: underline; }
+    .row { display:flex; gap:10px; }
+    .row .btn { flex:1; }
+    .feedback { font-size:13px; margin-top:10px; display:none; }
+    .feedback.error { color: var(--danger); }
+    .feedback.success { color: var(--success); }
+    .modal { position: fixed; inset:0; display:none; align-items:center; justify-content:center; z-index: 2; }
+    .modal.active { display:flex; }
+    .modal-content { background:#fff; padding:24px; border-radius:10px; width:520px; max-width:90vw; box-shadow:0 10px 30px rgba(0,0,0,0.25); }
+    .modal-header { display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:12px; }
+    .modal-title { font-size:18px; font-weight:700; color: var(--primary); }
+    .close { background:none; border:none; font-size:22px; cursor:pointer; color:#888; }
+    .whats-btn { background:#25D366; color:#fff; border:none; padding:10px 16px; border-radius:8px; font-weight:700; cursor:pointer; }
+    .small { font-size:12px; color:#555; }
+    .reset-card { display:none; margin-top:10px; padding:14px; border:1px solid #eee; border-radius:8px; background:#fafafa; text-align:left; }
+    .reset-card h3 { margin:0 0 8px; font-size:16px; color:#333; }
+    .note { font-size:12px; color:#777; }
+    .loading { display: none; text-align: center; margin: 10px 0; }
+    .spinner { 
+      border: 3px solid #f3f3f3; 
+      border-top: 3px solid var(--primary); 
+      border-radius: 50%; 
+      width: 20px; 
+      height: 20px; 
+      animation: spin 1s linear infinite; 
+      display: inline-block; 
+      margin-right: 10px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="overlay"></div>
+  <div class="card">
+    <img src="Nova pasta/Imagem5.png" alt="Logo" class="logo" />
+    <h1>NORMAQ</h1>
+    <p class="small">Autenticação Requerida</p>
+
+    <label for="login-user">Usuário ou E-mail</label>
+    <input id="login-user" type="text" placeholder="Digite seu usuário ou e-mail" value="thiago.carmo" />
+
+    <label for="login-pass">Senha</label>
+    <input id="login-pass" type="password" placeholder="Digite sua senha" value="NMQ@2025" />
+
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <span>Autenticando...</span>
+    </div>
+
+    <button class="btn btn-primary" id="btn-login">Acessar Sistema</button>
+    <div class="row">
+      <button class="btn btn-secondary" id="btn-info">Informações</button>
+      <button class="btn btn-secondary" id="btn-reset">Resetar Senha</button>
+    </div>
+    <div id="login-feedback" class="feedback error"></div>
+
+    <div id="reset-card" class="reset-card">
+      <h3>Solicitar redefinição de senha</h3>
+      <label for="reset-email">E-mail cadastrado</label>
+      <input id="reset-email" type="email" placeholder="Digite seu e-mail" />
+      <button class="btn btn-primary" id="btn-reset-send">Enviar link de redefinição</button>
+      <button class="btn btn-secondary" id="btn-reset-open">Abrir página de redefinição agora</button>
+      <div id="reset-feedback" class="feedback"></div>
+      <p class="note">Você receberá um e-mail com um link válido por 30 minutos.</p>
+    </div>
+  </div>
+
+  <!-- Modal de Informações -->
+  <div id="info-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">Informações de Acesso</div>
+        <button class="close" id="info-close">×</button>
+      </div>
+      <div>
+        <p>Para problemas de acesso:<br/>Entre em contato com o administrador do sistema:</p>
+        <div style="background:#f7f7f7; padding:12px 14px; border-radius:8px; margin:10px 0;">
+          <strong>Thiago Carmo – Especialista em Dados e Desenvolvedor</strong><br/>
+          <span>📞 (81) 99514-3900</span>
+        </div>
+        <a class="whats-btn" target="_blank" href="https://wa.me/5581995143900">Abrir WhatsApp</a>
+        <div style="margin-top:16px;">
+          <strong>Horário de atendimento:</strong><br/>
+          <span>Segunda a sexta: 8h às 18h</span><br/>
+          <span>Sábado: 8h às 12h</span>
+        </div>
+        <div style="text-align:right; margin-top:16px;">
+          <button class="btn btn-secondary" id="info-close-bottom">Fechar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de alteração de senha (primeiro acesso) -->
+  <div id="change-modal" class="modal">
+    <div class="modal-content" style="max-width:440px;">
+      <div class="modal-header">
+        <div class="modal-title">Alterar senha no primeiro acesso</div>
+        <button class="close" id="change-close">×</button>
+      </div>
+      <div>
+        <label for="new-pass">Nova senha</label>
+        <input id="new-pass" type="password" minlength="8" placeholder="Digite a nova senha" />
+        <label for="new-pass-confirm">Confirmar senha</label>
+        <input id="new-pass-confirm" type="password" minlength="8" placeholder="Confirme a nova senha" />
+        <div id="change-feedback" class="feedback error"></div>
+        <div style="text-align:right; margin-top:12px;">
+          <button class="btn btn-primary" id="btn-change-save">Salvar nova senha</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Configurações
+    const supabaseUrl = 'https://jnbirdxgllehrikluftu.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpuYmlyZHhnbGxlaHJpa2x1ZnR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMDcxNTgsImV4cCI6MjA3NjU4MzE1OH0.OG4LjCJFAvOl0IOIrPlL3wZ4f7EeDcO-rUZ3dDIOqi4';
+    const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+    
+    // bcryptjs pode se registrar de diferentes formas no window object
+    const bcrypt = window.bcrypt || (window.dcodeIO && window.dcodeIO.bcrypt);
+
+    const emailjsConfig = {
+      serviceId: 'service_erkwc1t',
+      templateId: 'template_d1ec1cc',
+      publicKey: 'knjNxsRamdV3bihTc'
+    };
+    emailjs.init(emailjsConfig.publicKey);
+
+    const DEFAULT_FIRST_PASSWORD = 'NMQ@123';
+
+    const el = {
+      user: document.getElementById('login-user'),
+      pass: document.getElementById('login-pass'),
+      loginBtn: document.getElementById('btn-login'),
+      infoBtn: document.getElementById('btn-info'),
+      resetBtn: document.getElementById('btn-reset'),
+      infoModal: document.getElementById('info-modal'),
+      infoClose: document.getElementById('info-close'),
+      infoCloseBottom: document.getElementById('info-close-bottom'),
+      feedback: document.getElementById('login-feedback'),
+      resetCard: document.getElementById('reset-card'),
+      resetEmail: document.getElementById('reset-email'),
+      resetSend: document.getElementById('btn-reset-send'),
+      resetOpen: document.getElementById('btn-reset-open'),
+      resetFeedback: document.getElementById('reset-feedback'),
+      changeModal: document.getElementById('change-modal'),
+      changeClose: document.getElementById('change-close'),
+      changeFeedback: document.getElementById('change-feedback'),
+      changeSave: document.getElementById('btn-change-save'),
+      newPass: document.getElementById('new-pass'),
+      newPassConfirm: document.getElementById('new-pass-confirm'),
+      loading: document.getElementById('loading')
+    };
+
+    let loggedUser = null;
+
+    // Função para mostrar/ocultar loading
+    function setLoading(loading) {
+      if (loading) {
+        el.loading.style.display = 'block';
+        el.loginBtn.disabled = true;
+      } else {
+        el.loading.style.display = 'none';
+        el.loginBtn.disabled = false;
+      }
+    }
+
+    function isDefaultPassword(user){
+      try {
+        const pass = (user && user.senha) ? String(user.senha) : '';
+        if (!pass) return false;
+        if (pass.startsWith('$2a$') || pass.startsWith('$2b$') || pass.startsWith('$2y$')) {
+          return bcrypt.compareSync(DEFAULT_FIRST_PASSWORD, pass);
+        }
+        return pass === DEFAULT_FIRST_PASSWORD;
+      } catch(_) { return false; }
+    }
+
+    async function logLoginVisit(user) {
+      if (!user) return;
+      const payload = {
+        usuario: user.usuario,
+        nome_completo: user.nome_completo,
+        tipo_usuario: user.tipo_usuario,
+        pagina: 'login',
+        created_at: new Date().toISOString()
+      };
+      try {
+        const { error } = await supabaseClient.from('page_visits').insert(payload);
+        if (error) throw error;
+      } catch (_) {
+        const local = JSON.parse(localStorage.getItem('pageVisits') || '[]');
+        local.push(payload);
+        localStorage.setItem('pageVisits', JSON.stringify(local));
+      }
+    }
+
+    async function doLogin() {
+      el.feedback.style.display = 'none';
+      const login = el.user.value.trim();
+      const senha = el.pass.value.trim();
+      
+      if (!login || !senha) {
+        showFeedback('Informe usuário/e-mail e senha.', true);
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        // Busca o usuário no banco de dados
+        const { data: users, error } = await supabaseClient
+          .from('usuarios_auth')
+          .select('*')
+          .or(`usuario.eq.${login},email.eq.${login}`)
+          .limit(1);
+
+        if (error) {
+          console.error('Erro ao buscar usuário:', error);
+          showFeedback('Erro ao conectar com o banco de dados.', true);
+          return;
+        }
+
+        if (!users || users.length === 0) {
+          showFeedback('Usuário/E-mail não encontrado.', true);
+          return;
+        }
+
+        const user = users[0];
+        const senhaBanco = user.senha;
+
+        // Verificação especial para o usuário thiago.carmo com senha NMQ@2025
+        if (user.usuario === 'thiago.carmo' && senha === 'NMQ@2025') {
+          // Login direto para o usuário thiago.carmo
+          console.log('Login especial para thiago.carmo');
+          loggedUser = user;
+          saveUserToLocalStorage(user);
+          try { await logLoginVisit(user); } catch(_) {}
+          location.href = 'index.html';
+          return;
+        }
+
+        // Verificação de senha para outros usuários
+        let senhaOk = false;
+
+        // Se a senha no banco é hash bcrypt ($2a$, $2b$ ou $2y$)
+        if (senhaBanco && (senhaBanco.startsWith('$2a$') || senhaBanco.startsWith('$2b$') || senhaBanco.startsWith('$2y$'))) {
+          try {
+            // DEBUG: Verificar se bcrypt está disponível
+            if (typeof bcrypt === 'undefined' || typeof bcrypt.compareSync !== 'function') {
+              console.error('bcrypt não está disponível:', typeof bcrypt);
+              showFeedback('Erro interno: biblioteca de criptografia não carregada.', true);
+              return;
+            }
+            
+            // Normaliza prefixo $2y$ para $2b$ (compatibilidade com bcryptjs)
+            const normalized = senhaBanco.startsWith('$2y$')
+              ? ('$2b$' + senhaBanco.slice(4))
+              : senhaBanco;
+            
+            console.log('Comparando senha:', { 
+              senhaDigitada: senha, 
+              hashBanco: senhaBanco, 
+              normalized: normalized,
+              prefixo: senhaBanco.substring(0, 4)
+            });
+            
+            senhaOk = bcrypt.compareSync(senha, normalized);
+            console.log('Resultado da comparação:', senhaOk);
+          } catch (bcryptError) {
+            console.error('Erro ao comparar senha bcrypt:', bcryptError);
+            senhaOk = false;
+          }
+        } else {
+          // Senha em texto plano (apenas para desenvolvimento)
+          console.log('Comparação em texto plano:', { senhaDigitada: senha, senhaBanco: senhaBanco });
+          senhaOk = (senhaBanco === senha);
+        }
+
+        if (!senhaOk) {
+          showFeedback('Senha incorreta.', true);
+          return;
+        }
+
+        loggedUser = user;
+        saveUserToLocalStorage(user);
+        try { await logLoginVisit(user); } catch(_) {}
+        
+        // Primeiro acesso: força troca de senha com base na senha padrão
+        if (isDefaultPassword(user)) {
+          el.changeModal.classList.add('active');
+          return;
+        }
+
+        location.href = 'index.html';
+
+      } catch (error) {
+        console.error('Erro no login:', error);
+        showFeedback('Erro interno do sistema. Tente novamente.', true);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function saveUserToLocalStorage(user) {
+      const first = isDefaultPassword(user);
+      localStorage.setItem('authUser', JSON.stringify({
+        id: user.id,
+        nome_completo: user.nome_completo,
+        email: user.email,
+        usuario: user.usuario,
+        is_admin: user.is_admin,
+        tipo_usuario: user.tipo_usuario,
+        empresa_id: user.empresa_id || null,
+        primeiro_login: first,
+        loggedIn: true,
+        timestamp: new Date().getTime()
+      }));
+    }
+
+    function showFeedback(text, isError) {
+      el.feedback.textContent = text;
+      el.feedback.className = 'feedback ' + (isError ? 'error' : 'success');
+      el.feedback.style.display = 'block';
+    }
+
+    function toggleInfo(open) { 
+      el.infoModal.classList[open ? 'add' : 'remove']('active'); 
+    }
+
+    function toggleResetCard() {
+      const visible = el.resetCard.style.display === 'block';
+      el.resetCard.style.display = visible ? 'none' : 'block';
+      el.resetFeedback.style.display = 'none';
+    }
+
+    // UUID v4 util (compartilhado)
+    function generateUUIDv4() {
+      if (self.crypto && self.crypto.randomUUID) {
+        return self.crypto.randomUUID();
+      }
+      const getRandomValues = (n) => {
+        const arr = new Uint8Array(n);
+        if (self.crypto && self.crypto.getRandomValues) self.crypto.getRandomValues(arr);
+        else for (let i = 0; i < n; i++) arr[i] = Math.floor(Math.random() * 256);
+        return arr;
+      };
+      const bytes = getRandomValues(16);
+      bytes[6] = (bytes[6] & 0x0f) | 0x40; // versão 4
+      bytes[8] = (bytes[8] & 0x3f) | 0x80; // variante
+      const hex = [...bytes].map(b => b.toString(16).padStart(2,'0'));
+      return `${hex[0]}${hex[1]}${hex[2]}${hex[3]}-${hex[4]}${hex[5]}-${hex[6]}${hex[7]}-${hex[8]}${hex[9]}-${hex[10]}${hex[11]}${hex[12]}${hex[13]}${hex[14]}${hex[15]}`;
+    }
+
+    async function solicitarReset() {
+      el.resetFeedback.style.display = 'none';
+      const email = el.resetEmail.value.trim();
+      
+      if (!/.+@.+\..+/.test(email)) {
+        showResetFeedback('E-mail inválido.', true);
+        return;
+      }
+
+      try {
+        let user = null;
+        let token = null;
+        let link = null;
+
+        const { data: users } = await supabaseClient
+          .from('usuarios_auth')
+          .select('id, nome_completo, email, usuario')
+          .eq('email', email)
+          .limit(1);
+        
+        user = users && users[0];
+        if (!user) { 
+          showResetFeedback('E-mail não encontrado.', true); 
+          return; 
+        }
+        token = generateUUIDv4();
+        const expiracao = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+
+        const { error: insErr } = await supabaseClient
+          .from('reset_senha_tokens')
+          .insert({
+            usuario_id: user.id,
+            expiracao,
+            usado: false,
+            criado_em: new Date().toISOString(),
+            token
+          });
+
+        if (insErr) throw insErr;
+        link = location.origin + '/resetar-senha.html?token=' + encodeURIComponent(token) + '&uid=' + encodeURIComponent(user.id);
+        const templateParams = {
+          to_email: email,
+          subject: 'Redefinição de senha | NormaQ',
+          message: `Olá ${user.nome_completo || ''},\n\nRecebemos uma solicitação para redefinir sua senha.\nUse o link abaixo (válido por 30 minutos):\n${link}\n\nCaso não tenha solicitado, ignore este e-mail.`,
+          from_name: 'Sistema NormaQ'
+        };
+
+        await emailjs.send(
+          emailjsConfig.serviceId,
+          emailjsConfig.templateId,
+          templateParams,
+          emailjsConfig.publicKey
+        );
+        showResetFeedback('Link enviado para o seu e-mail.', false);
+        // Abrir automaticamente a página de redefinição em uma nova aba
+        try { window.open(link, '_blank'); } catch(_) {}
+        // Preencher usuário correto no campo de login
+        try { el.user.value = user.usuario || ''; el.pass.value=''; el.pass.focus(); } catch(_) {}
+        
+      } catch (err) {
+        console.error('Erro no reset:', err && (err.status || err.text) ? err : { message: String(err) });
+        el.resetFeedback.className = 'feedback error';
+        el.resetFeedback.style.display = 'block';
+        if (link) {
+          el.resetFeedback.innerHTML = `Falha ao enviar e-mail. Copie este link: <a href="${link}" target="_blank">${link}</a>`;
+          try { window.open(link, '_blank'); } catch(_) {}
+        } else {
+          showResetFeedback('Falha ao enviar e-mail. Tente novamente.', true);
+        }
+      }
+    }
+
+    async function abrirResetAgora() {
+      el.resetFeedback.style.display = 'none';
+      const email = el.resetEmail.value.trim();
+      if (!/.+@.+\..+/.test(email)) {
+        showResetFeedback('E-mail inválido.', true);
+        return;
+      }
+
+      try {
+        const { data: users } = await supabaseClient
+          .from('usuarios_auth')
+          .select('id, nome_completo, email, usuario')
+          .eq('email', email)
+          .limit(1);
+        const user = users && users[0];
+        if (!user) { showResetFeedback('E-mail não encontrado.', true); return; }
+
+        const token = generateUUIDv4();
+        const expiracao = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+        const { error: insErr } = await supabaseClient
+          .from('reset_senha_tokens')
+          .insert({ usuario_id: user.id, expiracao, usado: false, criado_em: new Date().toISOString(), token });
+        if (insErr) throw insErr;
+
+        const link = location.origin + '/resetar-senha.html?token=' + encodeURIComponent(token) + '&uid=' + encodeURIComponent(user.id);
+        showResetFeedback('Abrindo página de redefinição...', false);
+        try { el.user.value = user.usuario || ''; el.pass.value=''; el.pass.focus(); } catch(_) {}
+        try { window.open(link, '_blank'); } catch(_) {}
+      } catch (err) {
+        console.error('Erro ao abrir reset agora:', err);
+        showResetFeedback('Falha ao gerar link. Tente novamente.', true);
+      }
+    }
+
+    function showResetFeedback(text, isError) {
+      el.resetFeedback.textContent = text;
+      el.resetFeedback.className = 'feedback ' + (isError ? 'error' : 'success');
+      el.resetFeedback.style.display = 'block';
+    }
+
+    async function salvarNovaSenhaPrimeiroAcesso() {
+      el.changeFeedback.style.display = 'none';
+      const p1 = el.newPass.value.trim();
+      const p2 = el.newPassConfirm.value.trim();
+      
+      if (p1.length < 8) { 
+        el.changeFeedback.textContent = 'A senha deve ter pelo menos 8 caracteres.'; 
+        el.changeFeedback.style.display='block'; 
+        return; 
+      }
+      
+      if (p1 !== p2) { 
+        el.changeFeedback.textContent = 'As senhas não coincidem.'; 
+        el.changeFeedback.style.display='block'; 
+        return; 
+      }
+
+      try {
+        // Hash da nova senha antes de salvar
+        const hashedPassword = bcrypt.hashSync(p1, 10);
+        
+        const { error } = await supabaseClient
+          .from('usuarios_auth')
+          .update({ senha: hashedPassword })
+          .eq('id', loggedUser.id);
+
+        if (error) throw error;
+
+        // Atualiza localStorage
+        try {
+          const raw = localStorage.getItem('authUser');
+          if (raw) {
+            const obj = JSON.parse(raw);
+            obj.primeiro_login = false;
+            localStorage.setItem('authUser', JSON.stringify(obj));
+          }
+        } catch (e) {
+          console.warn('Falha ao atualizar authUser local:', e);
+        }
+
+        el.changeModal.classList.remove('active');
+        location.href = 'index.html';
+        
+      } catch (err) {
+        console.error('Erro ao salvar senha:', err);
+        el.changeFeedback.textContent = 'Falha ao salvar a nova senha.';
+        el.changeFeedback.style.display = 'block';
+      }
+    }
+
+    // Event Listeners
+    el.loginBtn.addEventListener('click', doLogin);
+    el.infoBtn.addEventListener('click', () => toggleInfo(true));
+    el.infoClose.addEventListener('click', () => toggleInfo(false));
+    el.infoCloseBottom.addEventListener('click', () => toggleInfo(false));
+    el.resetBtn.addEventListener('click', toggleResetCard);
+    el.resetSend.addEventListener('click', solicitarReset);
+    el.resetOpen.addEventListener('click', abrirResetAgora);
+    el.changeSave.addEventListener('click', salvarNovaSenhaPrimeiroAcesso);
+    el.changeClose.addEventListener('click', () => el.changeModal.classList.remove('active'));
+
+    // Enter key para login
+    el.pass.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        doLogin();
+      }
+    });
+
+    // Se veio de reset concluído, opcionalmente preencher usuário via uid
+    (async function(){
+      const params = new URLSearchParams(location.search);
+      if (params.get('reset') === 'ok') {
+        showFeedback('Senha alterada com sucesso. Faça login.', false);
+        const uid = params.get('uid');
+        if (uid) {
+          try {
+            const { data } = await supabaseClient
+              .from('usuarios_auth')
+              .select('usuario')
+              .eq('id', uid)
+              .limit(1);
+            if (data && data[0] && data[0].usuario) {
+              el.user.value = data[0].usuario;
+              el.pass.focus();
+            }
+          } catch (e) { console.warn('Falha ao preencher usuário pós-reset:', e); }
+        }
+      }
+    })();
+
+    // Auto-focus no campo de senha se usuário já estiver preenchido
+    if (el.user.value) {
+      el.pass.focus();
+    }
+  </script>
+</body>
+</html>
