@@ -3870,7 +3870,15 @@
                         const allowedPrevious = getAllowedPrevious(alerta.usuario, os.Tipo?.toLowerCase() || 'externa', os.Revenda, dias);
                         let prevOk = false;
                         if (allowedPrevious) {
-                            prevOk = normalizeNomeResponsavel(escalonamentoAnterior) === normalizeNomeResponsavel(allowedPrevious);
+                            const anteriorNorm = normalizeNomeResponsavel(escalonamentoAnterior);
+                            const allowedNorm = normalizeNomeResponsavel(allowedPrevious);
+                            if (anteriorNorm) {
+                                prevOk = anteriorNorm === allowedNorm;
+                            } else {
+                                // sem histórico anterior: inferir responsável anterior a partir dos dias (dias-1)
+                                const prevByDias = getPrevEscalonamentoByDias(os.Tipo?.toLowerCase() || 'externa', dias, os.Revenda);
+                                prevOk = normalizeNomeResponsavel(prevByDias) === allowedNorm;
+                            }
                         } else {
                             prevOk = normalizeNomeResponsavel(escalonamentoAnterior) !== normalizeNomeResponsavel(alerta.usuario);
                         }
@@ -6569,6 +6577,7 @@
                 clearImportPreview();
                 try { await loadOSData(); } catch(_) {}
                 try { await verificarTodosOsAlertas(true); } catch(_) {}
+                try { setTimeout(() => { verificarTodosOsAlertas(true); }, 8000); } catch(_) {}
             } catch (e) {
                 const msg = e?.message || e?.details || e?.hint || 'Erro';
                 setImportResumo('Erro ao salvar na Base.', `<div class="error">${msg}</div>`);
@@ -8405,6 +8414,13 @@ function getAllowedPrevious(escalonamentoAtual, tipo, revenda, dias) {
     if (idx <= 0) return null;
     return chain[idx - 1];
 }
+
+function getPrevEscalonamentoByDias(tipo, dias, revenda) {
+    try {
+        let prevDias = Number.isFinite(dias) ? Math.max(0, Math.floor(dias) - 1) : 0;
+        return getEscalonamento(tipo, prevDias, revenda);
+    } catch(_) { return null; }
+}
                 // 26–50 dias
                 if (dias <= 50) {
                     if (revendaNum === '3') {
@@ -9909,7 +9925,10 @@ function getAllowedPrevious(escalonamentoAtual, tipo, revenda, dias) {
             try {
                 const { data, error } = await supabase.from(tabelaBase).select('*');
                 if (error) throw error;
-                const alertas = await fetchAlertasConfigSupabase();
+                let alertas = await fetchAlertasConfigSupabase();
+                if (!alertas || alertas.length === 0) {
+                    try { alertas = await seedAlertasIfEmpty(); } catch(_) {}
+                }
                 const notificacoes = await fetchHistoricoNotificacoesSupabase();
                 const historicoAtual = {};
                 const processed = new Set();
@@ -9962,7 +9981,14 @@ function getAllowedPrevious(escalonamentoAtual, tipo, revenda, dias) {
                         const allowedPrevious = getAllowedPrevious(alerta.usuario, tipo, os.Revenda, dias);
                         let prevOk = false;
                         if (allowedPrevious) {
-                            prevOk = normalizeNomeResponsavel(anterior) === normalizeNomeResponsavel(allowedPrevious);
+                            const anteriorNorm = normalizeNomeResponsavel(anterior);
+                            const allowedNorm = normalizeNomeResponsavel(allowedPrevious);
+                            if (anteriorNorm) {
+                                prevOk = anteriorNorm === allowedNorm;
+                            } else {
+                                const prevByDias = getPrevEscalonamentoByDias(tipo, dias, os.Revenda);
+                                prevOk = normalizeNomeResponsavel(prevByDias) === allowedNorm;
+                            }
                         } else {
                             prevOk = normalizeNomeResponsavel(anterior) !== normalizeNomeResponsavel(alerta.usuario);
                         }
