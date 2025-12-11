@@ -2670,6 +2670,17 @@
                         <div id="import-list-duplicadas" class="table-container" style="max-height:280px; overflow:auto; border:1px solid #eee;"></div>
                     </div>
                 </div>
+                <div style="margin-top:16px;">
+                    <h3>Pré-visualização de e-mails por responsável</h3>
+                    <div id="import-email-preview" class="table-container" style="max-height:280px; overflow:auto; border:1px solid #eee;"></div>
+                    <div style="margin-top:8px; display:flex; gap:8px;">
+                        <button id="btn-send-import-emails" class="btn-primary" disabled>Enviar e-mails das novas importações</button>
+                        <label style="display:flex; align-items:center; gap:6px;">
+                            <input type="checkbox" id="import-email-force" />
+                            <span>Forçar envio (ignorar dedupe/cooldown)</span>
+                        </label>
+                    </div>
+                </div>
                 <details style="margin-top:16px;">
                     <summary>Instruções</summary>
                     <ul>
@@ -3969,6 +3980,86 @@
             console.log('=== VERIFICAÇÃO CONCLUÍDA ===');
         }
 
+        // NOVO: Verificação automática somente para gestores
+        async function verificarEscalonamentosGestoresAuto(force = false) {
+            try {
+                const { data, error } = await supabase.from(tabelaBase).select('*');
+                if (error) throw error;
+                let alertas = await fetchAlertasConfigSupabase();
+                if (!alertas || alertas.length === 0) {
+                    try { alertas = await seedAlertasIfEmpty(); } catch(_) {}
+                }
+                const historicoAtual = {};
+                const processed = new Set();
+                data.forEach(os => {
+                    const situacao = String(os['Situacao OS'] || '').toLowerCase();
+                    if (!situacao.includes('abert')) return;
+                    const dias = calcularDiasEmAberto(os);
+                    const tipo = os.Tipo?.toLowerCase() || 'externa';
+                    const atual = getEscalonamento(tipo, dias, os.Revenda);
+                    historicoAtual[os.Chave || os.Cahve] = atual;
+                });
+                const MANAGERS = ['Johnny','Graziela','Antônio Gustavo','Antonio Gustavo','Wanderley'];
+                for (const alerta of alertas) {
+                    if (!alerta.ativo) continue;
+                    if (!MANAGERS.includes(alerta.usuario)) continue;
+                    const key = `${alerta.usuario}|${alerta.email}`;
+                    if (processed.has(key)) continue;
+                    const osEscalonadas = data.filter(os => {
+                        const situacao = String(os['Situacao OS'] || '').toLowerCase();
+                        if (!situacao.includes('abert')) return false;
+                        const dias = calcularDiasEmAberto(os);
+                        const tipo = os.Tipo?.toLowerCase() || 'externa';
+                        const atual = getEscalonamento(tipo, dias, os.Revenda);
+                        const anterior = historicoEscalonamento[os.Chave || os.Cahve];
+                        const allowedPrevious = getAllowedPrevious(alerta.usuario, tipo, os.Revenda, dias);
+                        let prevOk = false;
+                        if (allowedPrevious) {
+                            const anteriorNorm = normalizeNomeResponsavel(anterior);
+                            const allowedNorm = normalizeNomeResponsavel(allowedPrevious);
+                            if (anteriorNorm) prevOk = anteriorNorm === allowedNorm; else {
+                                const prevByDias = getPrevEscalonamentoByDias(tipo, dias, os.Revenda);
+                                prevOk = normalizeNomeResponsavel(prevByDias) === allowedNorm;
+                            }
+                        } else {
+                            prevOk = normalizeNomeResponsavel(anterior) !== normalizeNomeResponsavel(alerta.usuario);
+                        }
+                        return normalizeNomeResponsavel(atual) === normalizeNomeResponsavel(alerta.usuario) && prevOk;
+                    });
+                    let novas = [];
+                    if (osEscalonadas.length) {
+                        const prevSet = await getPreviouslyNotifiedOSNumbers({ tipo: 'nova_os_escalonada', usuario: alerta.usuario, destinatario: alerta.email, windowMinutes: null, limit: 500 });
+                        novas = osEscalonadas.filter(os => {
+                            const n = String(os['Numero OS']||'').trim();
+                            return n && !prevSet.has(n);
+                        });
+                    }
+                    if (novas.length) {
+                        const titulo = `🔄 Nova OS Escalonada para Você`;
+                        let msgText = `Prezado(a) ${alerta.usuario},\n\nVocê recebeu ${novas.length} nova(s) OS escalonada(s):\n\n`;
+                        let msgHtml = `<p>Prezado(a) ${alerta.usuario},</p><p>Você recebeu <strong>${novas.length}</strong> nova(s) OS escalonada(s):</p><ul>`;
+                        const setAll = novas.map(os => String(os['Numero OS']||'').trim()).filter(Boolean);
+                        const fpAll = setAll.slice().sort((a,b)=>a.localeCompare(b)).join(',');
+                        novas.forEach(os => {
+                            const anterior = historicoEscalonamento[os.Chave || os.Cahve] || 'N/A';
+                            const dias = calcularDiasEmAberto(os);
+                            msgText += `• OS ${os['Numero OS']} - ${os.Cliente || 'N/A'} (Tipo: ${os.Tipo || '—'})\n  Responsável anterior: ${anterior}\n  Dias em aberto: ${dias} dias\n\n`;
+                            msgHtml += `<li><strong>OS ${os['Numero OS']}</strong> - ${os.Cliente || 'N/A'} <em>(Tipo: ${os.Tipo || '—'})</em><br><small>Responsável anterior: ${anterior} • Dias em aberto: ${dias} dias</small></li>`;
+                        });
+                        msgHtml += `</ul><p>Por favor, assuma a responsabilidade por estas OS.</p><p><strong>Atenciosamente,</strong><br>Sistema de Controle de OS</p>`;
+                        const skip = await shouldSkipNotificationByOSSet({ tipo: 'nova_os_escalonada', usuario: alerta.usuario, destinatario: alerta.email, osNumbers: setAll, windowMinutes: null })
+                            || await shouldSkipNotification({ tipo: 'nova_os_escalonada', usuario: alerta.usuario, destinatario: alerta.email, titulo, mensagem: msgText, windowMinutes: 180 });
+                        const resultadoEnvio = skip ? { success: false, error: 'duplicate-skip' } : await enviarEmailReal(alerta.email, titulo, msgHtml);
+                        const registro = { tipo: 'nova_os_escalonada', titulo, mensagem: `${msgText}\nFP[os=${fpAll}]`, destinatario: alerta.email, usuario: alerta.usuario, enviado: !!resultadoEnvio.success, erro: resultadoEnvio.error || null, quantidadeOS: novas.length };
+                        await insertHistoricoNotificacaoSupabase(registro);
+                        processed.add(key);
+                    }
+                }
+                historicoEscalonamento = historicoAtual;
+                localStorage.setItem('historicoEscalonamento', JSON.stringify(historicoEscalonamento));
+            } catch(e) { console.error('Erro na verificação automática de gestores:', e); }
+        }
+
         let alertScheduleTimer = null;
         let lastAlertScheduleAt = 0;
         function scheduleAlertCheckSoon(reason) {
@@ -3979,7 +4070,7 @@
                 if (alertScheduleTimer) { clearTimeout(alertScheduleTimer); }
                 alertScheduleTimer = setTimeout(() => {
                     alertScheduleTimer = null;
-                    verificarTodosOsAlertas(true);
+                    verificarEscalonamentosGestoresAuto(true);
                 }, 5000);
             } catch(_) {}
         }
@@ -4611,6 +4702,25 @@
             
             // Verifica alertas imediatamente ao carregar (com delay)
             setTimeout(verificarTodosOsAlertas, 15000);
+            // NOVO: verificação automática de gestores (cada 30 min)
+            try {
+                setInterval(() => { verificarEscalonamentosGestoresAuto(false); }, 30 * 60 * 1000);
+            } catch(_) {}
+            // NOVO: agendamento próximo a 08:00 local
+            try {
+                const scheduleDaily = () => {
+                    const now = new Date();
+                    const next = new Date(now);
+                    next.setHours(8,0,0,0);
+                    if (next <= now) next.setDate(next.getDate() + 1);
+                    const delay = next.getTime() - now.getTime();
+                    setTimeout(() => {
+                        verificarEscalonamentosGestoresAuto(true);
+                        scheduleDaily();
+                    }, delay);
+                };
+                scheduleDaily();
+            } catch(_) {}
         });
 
         window.addEventListener('beforeunload', function() {
@@ -4901,6 +5011,8 @@
             if (btnParseImport) btnParseImport.addEventListener('click', handleImportParse);
             if (btnSaveImport) btnSaveImport.addEventListener('click', handleImportSave);
             if (btnClearImport) btnClearImport.addEventListener('click', clearImportPreview);
+            const btnSendImportEmails = document.getElementById('btn-send-import-emails');
+            if (btnSendImportEmails) btnSendImportEmails.addEventListener('click', sendImportEmailsFromPreview);
 
             const manualSave = document.getElementById('manual-update-save');
             if (manualSave) {
@@ -6379,6 +6491,102 @@
             if (vEl) vEl.innerHTML = mkTable(valid);
             if (dEl) dEl.innerHTML = mkTable(duplicates);
         }
+        function computeImportEmailGroups(items) {
+            const groups = new Map();
+            const normTipo = v => String(v||'').trim().toLowerCase();
+            const normRev = v => String(v||'').trim();
+            const getDias = (r) => {
+                const raw = r.Dias;
+                if (raw !== undefined && String(raw).trim() !== '') {
+                    const di = parseInt(String(raw).trim(), 10);
+                    if (!isNaN(di) && di >= 0) return di;
+                }
+                return calculateDaysRobust(r.Emissao);
+            };
+            items.forEach(r => {
+                const tipo = normTipo(r.Tipo || r['Tipo OS'] || 'externa');
+                const revenda = normRev(r.Revenda);
+                const dias = getDias(r);
+                const usuario = getEscalonamento(tipo, dias, revenda);
+                const arr = groups.get(usuario) || [];
+                arr.push({ usuario, tipo, dias, revenda, numero: String(r['Numero OS']||'').trim(), cliente: r.Cliente||'', chave: r.Chave || r.Cahve || '' });
+                groups.set(usuario, arr);
+            });
+            return groups;
+        }
+        function renderImportEmailPreview(groups) {
+            try {
+                const el = document.getElementById('import-email-preview');
+                const btn = document.getElementById('btn-send-import-emails');
+                const entries = Array.from(groups.entries());
+                if (!el) return;
+                if (entries.length === 0) {
+                    el.innerHTML = '<div class="empty-state">Nenhum e-mail a enviar.</div>';
+                    if (btn) btn.disabled = true;
+                    return;
+                }
+                const rows = entries.map(([usuario, list]) => {
+                    const nums = list.map(x => x.numero).filter(Boolean).slice(0, 20).join(', ');
+                    return `<tr><td>${usuario}</td><td>${list.length}</td><td>${nums}${list.length>20?'…':''}</td></tr>`;
+                }).join('');
+                el.innerHTML = `<table><thead><tr><th>Responsável</th><th>Qtd OS</th><th>OS (parcial)</th></tr></thead><tbody>${rows}</tbody></table>`;
+                if (btn) btn.disabled = entries.every(([,list]) => list.length === 0);
+            } catch(_) {}
+        }
+        async function sendImportEmailsFromPreview() {
+            try {
+                const items = (importPreviewState.valid || []).concat(importPreviewState.duplicates || []);
+                if (!items.length) { alert('Nenhuma OS para enviar.'); return; }
+                let alertas = await fetchAlertasConfigSupabase();
+                if (!alertas || alertas.length === 0) {
+                    try { alertas = await seedAlertasIfEmpty(); } catch(_) {}
+                }
+                const byUser = new Map();
+                (alertas||[]).forEach(a => { if (a && a.usuario && a.email && a.ativo !== false) byUser.set(a.usuario, a.email); });
+                const groups = computeImportEmailGroups(items);
+                const entries = Array.from(groups.entries());
+                const forceEl = document.getElementById('import-email-force');
+                const force = !!(forceEl && forceEl.checked);
+                let enviados = 0, pulados = 0, semEmail = 0;
+                for (const [usuario, list] of entries) {
+                    const email = byUser.get(usuario);
+                    if (!email) { semEmail++; continue; }
+                    const setAll = Array.from(new Set(list.map(x => x.numero).filter(Boolean)));
+                    const fpAll = setAll.slice().sort((a,b)=>a.localeCompare(b)).join(',');
+                    const titulo = 'Alerta de Escalonamento - Sistema OS NORMAQ';
+                    let msgText = `Prezado(a) ${usuario},\n\nVocê recebeu ${list.length} nova(s) OS importada(s) sob sua responsabilidade:\n\n`;
+                    let msgHtml = `<p>Prezado(a) ${usuario},</p><p>Você recebeu <strong>${list.length}</strong> nova(s) OS importada(s) sob sua responsabilidade:</p><ul>`;
+                    list.forEach(x => {
+                        msgText += `• OS ${x.numero} - ${x.cliente || 'N/A'} (Tipo: ${x.tipo || '—'} • Dias: ${x.dias})\n`;
+                        msgHtml += `<li><strong>OS ${x.numero}</strong> - ${x.cliente || 'N/A'} <em>(Tipo: ${x.tipo || '—'} • Dias: ${x.dias})</em></li>`;
+                    });
+                    msgHtml += `</ul><p>Por favor, verifique e assuma as ações necessárias.</p><p><strong>Atenciosamente,</strong><br>Sistema de Controle de OS</p>`;
+                    let skip = false;
+                    if (!force) {
+                        const cooldownAny = await shouldCooldownAnySend({ usuario, destinatario: email, minutes: 60 });
+                        skip = cooldownAny
+                            || await isUserSendLocked({ tipo: 'alerta_unico_usuario', usuario, windowMinutes: 2 })
+                            || await shouldSkipNotificationByOSSet({ tipo: 'alerta_unico_usuario', usuario, destinatario: email, osNumbers: setAll, windowMinutes: null })
+                            || await shouldSkipNotification({ tipo: 'alerta_unico_usuario', usuario, destinatario: email, titulo, mensagem: msgText, windowMinutes: 180 });
+                        if (!skip) {
+                            setUserSendLock({ tipo: 'alerta_unico_usuario', usuario });
+                            await sleep(300 + Math.floor(Math.random()*700));
+                            const recheck = await shouldSkipNotificationByOSSet({ tipo: 'alerta_unico_usuario', usuario, destinatario: email, osNumbers: setAll, windowMinutes: null })
+                                || await shouldSkipNotification({ tipo: 'alerta_unico_usuario', usuario, destinatario: email, titulo, mensagem: msgText, windowMinutes: 180 });
+                            if (recheck) skip = true;
+                        }
+                    }
+                    const resultadoEnvio = skip ? { success: false, error: 'duplicate-skip' } : await enviarEmailReal(email, titulo, msgHtml);
+                    const reg = { tipo: 'alerta_unico_usuario', titulo, mensagem: `${msgText}\nFP[os=${fpAll}]`, destinatario: email, usuario, enviado: !!resultadoEnvio.success, erro: resultadoEnvio.error || null, quantidadeOS: list.length };
+                    await insertHistoricoNotificacaoSupabase(reg);
+                    enviados += resultadoEnvio.success ? 1 : 0;
+                    pulados += resultadoEnvio.success ? 0 : 1;
+                }
+                alert(`Envio concluído. Enviados: ${enviados}. Pulados/duplicados: ${pulados}. Usuários sem e-mail: ${semEmail}.`);
+            } catch (e) {
+                alert('Falha ao enviar e-mails: ' + (e?.message || 'Erro'));
+            }
+        }
         function setImportResumo(text, details = '') {
             const r = document.getElementById('import-resumo');
             const d = document.getElementById('import-detalhes');
@@ -6465,10 +6673,13 @@
                 setImportResumo(`Lidas: ${parsed.rows.length}. Com chave/tipo ou revenda/tipo/nro: ${withKeys.length}. Válidas: ${valid.length}. Duplicatas: ${duplicates.length}.`,
                     `<div class="info">Duplicidade avaliada por "Chave+Tipo" e por "Revenda+Tipo+Numero OS" contra arquivo e Base.</div>`);
                 renderImportLists(valid, duplicates);
+                try { const groups = computeImportEmailGroups(valid.concat(duplicates)); renderImportEmailPreview(groups); } catch(_) {}
                 const btnSave = document.getElementById('btn-save-import');
                 const btnClear = document.getElementById('btn-clear-import');
+                const btnSendEmails = document.getElementById('btn-send-import-emails');
                 if (btnSave) btnSave.disabled = valid.length === 0;
                 if (btnClear) btnClear.disabled = (parsed.rows.length === 0);
+                if (btnSendEmails) btnSendEmails.disabled = (valid.length + duplicates.length) === 0;
             } catch (e) {
                 setImportResumo('Erro ao validar dados.', `<div class="error">${e?.message || 'Erro'}</div>`);
             }
@@ -6477,10 +6688,13 @@
             importPreviewState = { headers: [], rows: [], valid: [], duplicates: [], existingPairs: new Set() };
             setImportResumo('Aguardando arquivo ou colagem.');
             renderImportLists([], []);
+            try { renderImportEmailPreview(new Map()); } catch(_) {}
             const btnSave = document.getElementById('btn-save-import');
             const btnClear = document.getElementById('btn-clear-import');
+            const btnSendEmails = document.getElementById('btn-send-import-emails');
             if (btnSave) btnSave.disabled = true;
             if (btnClear) btnClear.disabled = true;
+            if (btnSendEmails) btnSendEmails.disabled = true;
         }
         async function handleImportSave() {
             try {
@@ -6575,9 +6789,9 @@
                 }
                 setImportResumo(`Importação concluída. Sucesso: ${ok}. Falhas: ${err}. Ignorados por falta de campos: ${invalidCount}.`);
                 clearImportPreview();
-                try { await loadOSData(); } catch(_) {}
-                try { await verificarTodosOsAlertas(true); } catch(_) {}
-                try { setTimeout(() => { verificarTodosOsAlertas(true); }, 8000); } catch(_) {}
+            try { await loadOSData(); } catch(_) {}
+            try { await verificarEscalonamentosGestoresAuto(true); } catch(_) {}
+            try { setTimeout(() => { verificarEscalonamentosGestoresAuto(true); }, 8000); } catch(_) {}
             } catch (e) {
                 const msg = e?.message || e?.details || e?.hint || 'Erro';
                 setImportResumo('Erro ao salvar na Base.', `<div class="error">${msg}</div>`);
