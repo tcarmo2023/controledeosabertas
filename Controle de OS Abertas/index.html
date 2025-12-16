@@ -5258,11 +5258,13 @@
         function applyUserAccessControl() {
             try {
                 const user = window.NormaQCurrentUser || (JSON.parse(localStorage.getItem('authUser')) || null);
-                const isAdmin = !!(user && (user.is_admin || user.tipo_usuario === 'Administrador'));
-                const isGestor = !!(user && user.tipo_usuario === 'Gestor');
-                const isUsuario = !!(user && user.tipo_usuario === 'Usuário');
-                // Whitelist para acesso à aba Atualização
+                // Normaliza o tipo de usuário para comparação robusta (sem acento, minúsculo)
                 const normalize = s => (s || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+                const tipoNorm = normalize(user && user.tipo_usuario);
+                const isAdmin = !!(user && (user.is_admin || tipoNorm === 'administrador' || tipoNorm === 'admin' || tipoNorm === 'administrator' || tipoNorm === 'adm'));
+                const isGestor = !!(user && (tipoNorm === 'gestor'));
+                const isUsuario = !!(user && (tipoNorm === 'usuario'));
+                // Whitelist para acesso à aba Atualização
                 const nomeNorm = normalize(user && (user.nome_completo || user.usuario));
                 const UPDATE_WHITELIST = ['isabelle','ana leya','flavia','giovana','bruna','graziela','johnny','wanderley'];
                 const canUseAtualizacao = UPDATE_WHITELIST.some(n => nomeNorm.includes(n));
@@ -5517,12 +5519,13 @@
         function getCurrentUserInfo() {
             const user = window.NormaQCurrentUser || (JSON.parse(localStorage.getItem('authUser')) || null);
             if (!user) return null;
+            const tipoNorm = (user.tipo_usuario || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
             return {
                 id: user.id,
                 nome_completo: user.nome_completo,
                 usuario: user.usuario,
                 tipo_usuario: user.tipo_usuario,
-                is_admin: !!(user.is_admin || user.tipo_usuario === 'Administrador'),
+                is_admin: !!(user.is_admin || ['administrador','admin','administrator','adm'].includes(tipoNorm)),
                 empresa_id: user.empresa_id || null
             };
         }
