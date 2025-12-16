@@ -16,6 +16,10 @@
                 window.NormaQRequireLogin = requireLogin;
                 // Usa uma classe na raiz para controlar visibilidade via CSS
                 document.documentElement.classList.toggle('require-login', requireLogin);
+                try {
+                    var el = document.getElementById('user-name');
+                    if (el && auth) { el.textContent = auth.nome_completo || auth.usuario || 'Usuário'; }
+                } catch(_){}
             } catch (e) {
                 window.NormaQCurrentUser = null;
                 window.NormaQRequireLogin = true;
@@ -4702,6 +4706,7 @@
             initializeTabs();
             setupEventListeners();
             applyUserAccessControl();
+            try { updateUserNameDisplay(); } catch(_) {}
             // Log de visita à página (proatividade)
             try { await logPageVisit(); } catch(e) { console.warn('Falha ao registrar visita:', e); }
             try { await startUserSession(); } catch(e) {}
