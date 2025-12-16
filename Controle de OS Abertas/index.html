@@ -2681,6 +2681,7 @@
                         </label>
                     </div>
                 </div>
+                
                 <details style="margin-top:16px;">
                     <summary>Instruções</summary>
                     <ul>
@@ -3724,8 +3725,10 @@
                     // ALERTA 1: OS próximas de serem escalonadas (para todos os usuários)
                     const osProximasEscalonamento = data.filter(os => {
                         const dias = calcularDiasEmAberto(os);
-                        const escalonamentoAtual = getEscalonamento(os.Tipo?.toLowerCase() || 'externa', dias, os.Revenda);
-                        const proximoEscalonamento = getProximoEscalonamento(os.Tipo?.toLowerCase() || 'externa', dias, os.Revenda);
+                        const tipo = os.Tipo?.toLowerCase() || 'externa';
+                        const revCode = getRevendaCode(String(os.Revenda)) || String(os.Revenda);
+                        const escalonamentoAtual = getEscalonamento(tipo, dias, revCode);
+                        const proximoEscalonamento = getProximoEscalonamento(tipo, dias, revCode);
                         const situacao = String(os['Situacao OS'] || '').toLowerCase();
                         if (!situacao.includes('abert')) return false;
                         
@@ -3733,37 +3736,51 @@
                         if (alerta.usuario === 'Antônio Gustavo') {
                             return escalonamentoAtual !== alerta.usuario && 
                                    proximoEscalonamento === alerta.usuario &&
-                                   dias >= (getLimiteEscalonamento(os.Tipo?.toLowerCase() || 'externa', alerta.usuario) - parseInt(alerta.dias));
+                                   dias >= (getLimiteEscalonamento(tipo, alerta.usuario) - parseInt(alerta.dias));
                         }
                         
                         // Para outros usuários - alerta normal
                         return escalonamentoAtual === alerta.usuario && 
                                proximoEscalonamento !== alerta.usuario &&
-                               dias >= (getLimiteEscalonamento(os.Tipo?.toLowerCase() || 'externa', alerta.usuario) - parseInt(alerta.dias));
+                               dias >= (getLimiteEscalonamento(tipo, alerta.usuario) - parseInt(alerta.dias));
                     });
                     
                     if (osProximasEscalonamento.length > 0) {
+                        const seen1 = new Set();
+                        const uniqProx = [];
+                        osProximasEscalonamento.forEach(os => {
+                            const n = String(os['Numero OS']||'').trim();
+                            if (!n || seen1.has(n)) return;
+                            seen1.add(n);
+                            uniqProx.push(os);
+                        });
                         const titulo = `⚠️ Alerta: OS Próxima de Escalonamento`;
                         let mensagemText = '';
                         let mensagemHtml = '';
                         if (alerta.usuario === 'Antônio Gustavo') {
                             mensagemText = `Prezado Antônio Gustavo,\n\n` +
-                                `Você possui ${osProximasEscalonamento.length} OS que estarão próximas de ser escalonadas para você em breve:\n\n`;
-                            mensagemHtml = `<p>Prezado Antônio Gustavo,</p><p>Você possui <strong>${osProximasEscalonamento.length}</strong> OS que estarão próximas de ser escalonadas para você em breve:</p><ul>`;
-                            osProximasEscalonamento.forEach(os => {
-                                const escalonamentoAtual = getEscalonamento(os.Tipo?.toLowerCase() || 'externa', calcularDiasEmAberto(os), os.Revenda);
-                                const diasParaEscalonar = getLimiteEscalonamento(os.Tipo?.toLowerCase() || 'externa', alerta.usuario) - calcularDiasEmAberto(os);
+                                `Você possui ${uniqProx.length} OS que estarão próximas de ser escalonadas para você em breve:\n\n`;
+                            mensagemHtml = `<p>Prezado Antônio Gustavo,</p><p>Você possui <strong>${uniqProx.length}</strong> OS que estarão próximas de ser escalonadas para você em breve:</p><ul>`;
+                            uniqProx.forEach(os => {
+                                const tipo2 = os.Tipo?.toLowerCase() || 'externa';
+                                const dias2 = calcularDiasEmAberto(os);
+                                const revCode2 = getRevendaCode(String(os.Revenda)) || String(os.Revenda);
+                                const escalonamentoAtual = getEscalonamento(tipo2, dias2, revCode2);
+                                const diasParaEscalonar = getLimiteEscalonamento(tipo2, alerta.usuario) - dias2;
                                 mensagemText += `• OS ${os['Numero OS']} - ${os.Cliente || 'N/A'} (Tipo: ${os.Tipo || '—'} | Atual: ${escalonamentoAtual} | Dias para escalonar: ${diasParaEscalonar})\n`;
                                 mensagemHtml += `<li><strong>OS ${os['Numero OS']}</strong> - ${os.Cliente || 'N/A'} <em>(Tipo: ${os.Tipo || '—'} | Atual: ${escalonamentoAtual} | Dias para escalonar: ${diasParaEscalonar})</em></li>`;
                             });
                             mensagemHtml += `</ul>`;
                         } else {
                             mensagemText = `Prezado(a) ${alerta.usuario},\n\n` +
-                                `Você possui ${osProximasEscalonamento.length} OS próximas de serem escalonadas. Ação necessária:\n\n`;
-                            mensagemHtml = `<p>Prezado(a) ${alerta.usuario},</p><p>Você possui <strong>${osProximasEscalonamento.length}</strong> OS próximas de serem escalonadas. Ação necessária:</p><ul>`;
-                            osProximasEscalonamento.forEach(os => {
-                                const proximoEscalonamento = getProximoEscalonamento(os.Tipo?.toLowerCase() || 'externa', calcularDiasEmAberto(os), os.Revenda);
-                                const diasParaEscalonar = getLimiteEscalonamento(os.Tipo?.toLowerCase() || 'externa', alerta.usuario) - calcularDiasEmAberto(os);
+                                `Você possui ${uniqProx.length} OS próximas de serem escalonadas. Ação necessária:\n\n`;
+                            mensagemHtml = `<p>Prezado(a) ${alerta.usuario},</p><p>Você possui <strong>${uniqProx.length}</strong> OS próximas de serem escalonadas. Ação necessária:</p><ul>`;
+                            uniqProx.forEach(os => {
+                                const tipo2 = os.Tipo?.toLowerCase() || 'externa';
+                                const dias2 = calcularDiasEmAberto(os);
+                                const revCode2 = getRevendaCode(String(os.Revenda)) || String(os.Revenda);
+                                const proximoEscalonamento = getProximoEscalonamento(tipo2, dias2, revCode2);
+                                const diasParaEscalonar = getLimiteEscalonamento(tipo2, alerta.usuario) - dias2;
                                 mensagemText += `• OS ${os['Numero OS']} - ${os.Cliente || 'N/A'} (Tipo: ${os.Tipo || '—'} | Próximo: ${proximoEscalonamento} | Dias: ${diasParaEscalonar})\n`;
                                 mensagemHtml += `<li><strong>OS ${os['Numero OS']}</strong> - ${os.Cliente || 'N/A'} <em>(Tipo: ${os.Tipo || '—'} | Próximo: ${proximoEscalonamento} | Dias: ${diasParaEscalonar})</em></li>`;
                             });
@@ -3771,7 +3788,7 @@
                         }
                         mensagemText += `\nPor favor, verifique estas OS no sistema.\nAtenciosamente,\nSistema de Controle de OS`;
                         mensagemHtml += `<p>Por favor, verifique estas OS no sistema.</p><p><strong>Atenciosamente,</strong><br>Sistema de Controle de OS</p>`;
-                        const osSet1 = osProximasEscalonamento.map(os => String(os['Numero OS']||'').trim()).filter(Boolean);
+                        const osSet1 = Array.from(seen1);
                         const fp1 = osSet1.slice().sort((a,b)=>a.localeCompare(b)).join(',');
                         const skip1 = await shouldCooldownAnySend({ usuario: alerta.usuario, destinatario: alerta.email, minutes: 60 })
                             || await shouldCooldownUserSend({ tipo: 'alerta_escalonamento_proximo', usuario: alerta.usuario, destinatario: alerta.email, minutes: 60 })
@@ -3861,7 +3878,9 @@
                     const situacao = String(os['Situacao OS'] || '').toLowerCase();
                     if (!situacao.includes('abert')) return; // registra apenas OS abertas
                     const dias = calcularDiasEmAberto(os);
-                    const escalonamentoAtual = getEscalonamento(os.Tipo?.toLowerCase() || 'externa', dias, os.Revenda);
+                    const tipo = os.Tipo?.toLowerCase() || 'externa';
+                    const revCode = getRevendaCode(String(os.Revenda)) || String(os.Revenda);
+                    const escalonamentoAtual = getEscalonamento(tipo, dias, revCode);
                     historicoAtual[os.Chave || os.Cahve] = escalonamentoAtual;
                 });
                 
@@ -3874,11 +3893,13 @@
                     
                     const osEscalonadasParaUsuario = data.filter(os => {
                         const dias = calcularDiasEmAberto(os);
-                        const escalonamentoAtual = getEscalonamento(os.Tipo?.toLowerCase() || 'externa', dias, os.Revenda);
+                        const tipo = os.Tipo?.toLowerCase() || 'externa';
+                        const revCode = getRevendaCode(String(os.Revenda)) || String(os.Revenda);
+                        const escalonamentoAtual = getEscalonamento(tipo, dias, revCode);
                         const escalonamentoAnterior = historicoEscalonamento[os.Chave || os.Cahve];
                         const situacao = String(os['Situacao OS'] || '').toLowerCase();
                         if (!situacao.includes('abert')) return false;
-                        const allowedPrevious = getAllowedPrevious(alerta.usuario, os.Tipo?.toLowerCase() || 'externa', os.Revenda, dias);
+                        const allowedPrevious = getAllowedPrevious(alerta.usuario, tipo, revCode, dias);
                         let prevOk = false;
                         if (allowedPrevious) {
                             const anteriorNorm = normalizeNomeResponsavel(escalonamentoAnterior);
@@ -3886,8 +3907,7 @@
                             if (anteriorNorm) {
                                 prevOk = anteriorNorm === allowedNorm;
                             } else {
-                                // sem histórico anterior: inferir responsável anterior a partir dos dias (dias-1)
-                                const prevByDias = getPrevEscalonamentoByDias(os.Tipo?.toLowerCase() || 'externa', dias, os.Revenda);
+                                const prevByDias = getPrevEscalonamentoByDias(tipo, dias, revCode);
                                 prevOk = normalizeNomeResponsavel(prevByDias) === allowedNorm;
                             }
                         } else {
@@ -3907,11 +3927,19 @@
                     }
 
                     if (osNovasParaUsuario.length > 0) {
+                        const seen3 = new Set();
+                        const uniqNovas = [];
+                        osNovasParaUsuario.forEach(os => {
+                            const n = String(os['Numero OS']||'').trim();
+                            if (!n || seen3.has(n)) return;
+                            seen3.add(n);
+                            uniqNovas.push(os);
+                        });
                         const titulo = `🔄 Nova OS Escalonada para Você`;
                         let mensagemText = `Prezado(a) ${alerta.usuario},\n\n` +
-                            `Você recebeu ${osNovasParaUsuario.length} nova(s) OS escalonada(s):\n\n`;
-                        let mensagemHtml = `<p>Prezado(a) ${alerta.usuario},</p><p>Você recebeu <strong>${osNovasParaUsuario.length}</strong> nova(s) OS escalonada(s):</p><ul>`;
-                        osNovasParaUsuario.forEach(os => {
+                            `Você recebeu ${uniqNovas.length} nova(s) OS escalonada(s):\n\n`;
+                        let mensagemHtml = `<p>Prezado(a) ${alerta.usuario},</p><p>Você recebeu <strong>${uniqNovas.length}</strong> nova(s) OS escalonada(s):</p><ul>`;
+                        uniqNovas.forEach(os => {
                             const escalonamentoAnterior = historicoEscalonamento[os.Chave || os.Cahve] || 'N/A';
                             const diasAberto = calcularDiasEmAberto(os);
                             mensagemText += `• OS ${os['Numero OS']} - ${os.Cliente || 'N/A'} (Tipo: ${os.Tipo || '—'})\n  Responsável anterior: ${escalonamentoAnterior}\n  Dias em aberto: ${diasAberto} dias\n\n`;
@@ -3920,7 +3948,7 @@
                         mensagemHtml += `</ul>`;
                         mensagemText += `Por favor, assuma a responsabilidade por estas OS.\nAtenciosamente,\nSistema de Controle de OS`;
                         mensagemHtml += `<p>Por favor, assuma a responsabilidade por estas OS.</p><p><strong>Atenciosamente,</strong><br>Sistema de Controle de OS</p>`;
-                        const osSet3 = osNovasParaUsuario.map(os => String(os['Numero OS']||'').trim()).filter(Boolean);
+                        const osSet3 = Array.from(seen3);
                         const fp3 = osSet3.slice().sort((a,b)=>a.localeCompare(b)).join(',');
                         let skip = await isUserSendLocked({ tipo: 'nova_os_escalonada', usuario: alerta.usuario, windowMinutes: 1 })
                             || await shouldSkipNotificationByOSSet({ tipo: 'nova_os_escalonada', usuario: alerta.usuario, destinatario: alerta.email, osNumbers: osSet3, windowMinutes: null })
@@ -3996,7 +4024,8 @@
                     if (!situacao.includes('abert')) return;
                     const dias = calcularDiasEmAberto(os);
                     const tipo = os.Tipo?.toLowerCase() || 'externa';
-                    const atual = getEscalonamento(tipo, dias, os.Revenda);
+                    const revCode = getRevendaCode(String(os.Revenda)) || String(os.Revenda);
+                    const atual = getEscalonamento(tipo, dias, revCode);
                     historicoAtual[os.Chave || os.Cahve] = atual;
                 });
                 const MANAGERS = ['Johnny','Graziela','Antônio Gustavo','Antonio Gustavo','Wanderley'];
@@ -4010,15 +4039,16 @@
                         if (!situacao.includes('abert')) return false;
                         const dias = calcularDiasEmAberto(os);
                         const tipo = os.Tipo?.toLowerCase() || 'externa';
-                        const atual = getEscalonamento(tipo, dias, os.Revenda);
+                        const revCode = getRevendaCode(String(os.Revenda)) || String(os.Revenda);
+                        const atual = getEscalonamento(tipo, dias, revCode);
                         const anterior = historicoEscalonamento[os.Chave || os.Cahve];
-                        const allowedPrevious = getAllowedPrevious(alerta.usuario, tipo, os.Revenda, dias);
+                        const allowedPrevious = getAllowedPrevious(alerta.usuario, tipo, revCode, dias);
                         let prevOk = false;
                         if (allowedPrevious) {
                             const anteriorNorm = normalizeNomeResponsavel(anterior);
                             const allowedNorm = normalizeNomeResponsavel(allowedPrevious);
                             if (anteriorNorm) prevOk = anteriorNorm === allowedNorm; else {
-                                const prevByDias = getPrevEscalonamentoByDias(tipo, dias, os.Revenda);
+                                const prevByDias = getPrevEscalonamentoByDias(tipo, dias, revCode);
                                 prevOk = normalizeNomeResponsavel(prevByDias) === allowedNorm;
                             }
                         } else {
@@ -4035,12 +4065,21 @@
                         });
                     }
                     if (novas.length) {
-                        const titulo = `🔄 Nova OS Escalonada para Você`;
-                        let msgText = `Prezado(a) ${alerta.usuario},\n\nVocê recebeu ${novas.length} nova(s) OS escalonada(s):\n\n`;
-                        let msgHtml = `<p>Prezado(a) ${alerta.usuario},</p><p>Você recebeu <strong>${novas.length}</strong> nova(s) OS escalonada(s):</p><ul>`;
-                        const setAll = novas.map(os => String(os['Numero OS']||'').trim()).filter(Boolean);
-                        const fpAll = setAll.slice().sort((a,b)=>a.localeCompare(b)).join(',');
+                        const seenG = new Set();
+                        const uniqNovasG = [];
                         novas.forEach(os => {
+                            const n = String(os['Numero OS']||'').trim();
+                            if (!n || seenG.has(n)) return;
+                            seenG.add(n);
+                            uniqNovasG.push(os);
+                        });
+                        const titulo = `🔄 Nova OS Escalonada para Você`;
+                        let msgText = `Prezado(a) ${alerta.usuario},\n\nVocê recebeu ${uniqNovasG.length} nova(s) OS escalonada(s):\n\n`;
+                        let msgHtml = `<p>Prezado(a) ${alerta.usuario},</p><p>Você recebeu <strong>${uniqNovasG.length}</strong> nova(s) OS escalonada(s):</p><ul>`;
+        
+                        const setAll = Array.from(seenG);
+                        const fpAll = setAll.slice().sort((a,b)=>a.localeCompare(b)).join(',');
+                        uniqNovasG.forEach(os => {
                             const anterior = historicoEscalonamento[os.Chave || os.Cahve] || 'N/A';
                             const dias = calcularDiasEmAberto(os);
                             msgText += `• OS ${os['Numero OS']} - ${os.Cliente || 'N/A'} (Tipo: ${os.Tipo || '—'})\n  Responsável anterior: ${anterior}\n  Dias em aberto: ${dias} dias\n\n`;
@@ -4104,6 +4143,28 @@
                 if (name === n('Graziela')) return 20;
                 if (name === n('Johnny')) return 30;
                 if (name === n('Antônio Gustavo') || name === n('Antonio Gustavo')) return 31; // Acima de 30 dias
+                return 0;
+            }
+        }
+
+        // Limite inferior (início) da faixa de escalonamento por responsável
+        function getInicioEscalonamento(tipo, escalonamento, revenda) {
+            const name = normalizeNomeResponsavel(escalonamento);
+            const n = (s) => normalizeNomeResponsavel(s);
+            const r = String(revenda || '').toString();
+            if (tipo === 'garantia') {
+                if (name === n('Flávia') || name === n('Giovana')) return 0;            // 0–25
+                if (name === n('Wanderley')) return 26;                                 // 26–35 (revenda 3)
+                if (name === n('Graziela')) return (r === '3' ? 36 : 26);               // 36–50 (3) | 26–50 (1,2,4)
+                if (name === n('Johnny')) return 50;                                    // 50–90
+                if (name === n('Antônio Gustavo') || name === n('Antonio Gustavo')) return 91; // 91+
+                return 0;
+            } else {
+                if (name === n('Isabelle') || name === n('Ana Leya') || name === n('Bruna')) return 0; // 0–10
+                if (name === n('Wanderley')) return 11;                              // 11–15 (revenda 3)
+                if (name === n('Graziela')) return (r === '3' ? 16 : 11);            // 16–20 (3) | 11–20 (1,2,4)
+                if (name === n('Johnny')) return 21;                                 // 21–30
+                if (name === n('Antônio Gustavo') || name === n('Antonio Gustavo')) return 31; // 31+
                 return 0;
             }
         }
@@ -5013,6 +5074,31 @@
             if (btnClearImport) btnClearImport.addEventListener('click', clearImportPreview);
             const btnSendImportEmails = document.getElementById('btn-send-import-emails');
             if (btnSendImportEmails) btnSendImportEmails.addEventListener('click', sendImportEmailsFromPreview);
+            const btnManagersEsc = document.getElementById('btn-send-managers-escalonadas');
+            const btnManagersProx = document.getElementById('btn-send-managers-proximas');
+            const managersMonthEl = document.getElementById('import-managers-month');
+            const previewManagersBtn = document.getElementById('btn-preview-managers');
+            if (btnManagersEsc) btnManagersEsc.addEventListener('click', () => sendManagersEmails('escalonadas'));
+            if (btnManagersProx) btnManagersProx.addEventListener('click', () => sendManagersEmails('proximas'));
+            if (managersMonthEl) managersMonthEl.addEventListener('change', async () => {
+                const mv = managersMonthEl.value || '';
+                const forceEl = document.getElementById('import-managers-force');
+                const force = !!(forceEl && forceEl.checked);
+                const tEl = document.getElementById('import-managers-tipos');
+                const tipos = tEl ? Array.from(tEl.selectedOptions).map(o=>o.value.toLowerCase()) : null;
+                const g2 = await computeManagersEmailGroupsFromBaseByMonth(mv, force, tipos);
+                renderManagersEmailPreview(g2);
+            });
+            if (previewManagersBtn) previewManagersBtn.addEventListener('click', async () => {
+                const el = document.getElementById('import-managers-month');
+                const mv = el ? el.value : '';
+                const forceEl = document.getElementById('import-managers-force');
+                const force = !!(forceEl && forceEl.checked);
+                const tEl = document.getElementById('import-managers-tipos');
+                const tipos = tEl ? Array.from(tEl.selectedOptions).map(o=>o.value.toLowerCase()) : null;
+                const g2 = await computeManagersEmailGroupsFromBaseByMonth(mv, force, tipos);
+                renderManagersEmailPreview(g2);
+            });
 
             const manualSave = document.getElementById('manual-update-save');
             if (manualSave) {
@@ -6587,6 +6673,260 @@
                 alert('Falha ao enviar e-mails: ' + (e?.message || 'Erro'));
             }
         }
+
+        async function computeManagersEmailGroupsFromBaseByMonth(monthValue, force = false, tipos = null) {
+            const groups = new Map();
+            try {
+                let data = [];
+                let dataSource = 'supabase';
+                console.log('Gestores Preview mês:', monthValue, 'tipos:', tipos, 'force:', !!force);
+                try {
+                    const resp = await supabase.from(tabelaBase).select('*');
+                    if (!resp.error) data = resp.data || [];
+                } catch(_) {}
+                if (!data || data.length === 0) {
+                    const mix = [];
+                    try { mix.push(...(osData.externa||[])); } catch(_) {}
+                    try { mix.push(...(osData.interna||[])); } catch(_) {}
+                    try { mix.push(...(osData.garantia||[])); } catch(_) {}
+                    data = mix;
+                    dataSource = 'cache';
+                }
+                console.log('Gestores Preview fonte:', dataSource, 'registros:', (data||[]).length);
+                let alertas = await fetchAlertasConfigSupabase();
+                if (!alertas || alertas.length === 0) {
+                    try { alertas = await seedAlertasIfEmpty(); } catch(_) {}
+                }
+                const byUser = new Map();
+                (alertas||[]).forEach(a => { if (a && a.usuario && a.email && a.ativo !== false) byUser.set(a.usuario, { email: a.email, dias: parseInt(a.dias||'0')||0 }); });
+                const MANAGERS = ['Johnny','Graziela','Antônio Gustavo','Antonio Gustavo','Wanderley'];
+                const norm = (s)=>normalizeNomeResponsavel(s);
+                const getInfo = (usuario)=>{
+                    let found = null;
+                    for (const [u,info] of byUser.entries()) { if (norm(u)===norm(usuario)) { found = info; break; } }
+                    return found || { email: '', dias: 3 };
+                };
+                for (const usuario of MANAGERS) {
+                    const info = getInfo(usuario);
+                    const escalonadasRaw = [];
+                    const proximasRaw = [];
+                    // Define intervalo do mês selecionado
+                    let start = null, end = null;
+                    try {
+                        const mv = String(monthValue||'').trim();
+                        if (mv && /\d{4}-\d{2}/.test(mv)) {
+                            const [y,m] = mv.split('-').map(x=>parseInt(x,10));
+                            start = new Date(y, m-1, 1); start.setHours(0,0,0,0);
+                            end = new Date(y, m, 1); end.setHours(0,0,0,0);
+                        }
+                    } catch(_) {}
+                    if (!start || !end) {
+                        const now = new Date();
+                        start = new Date(now.getFullYear(), now.getMonth(), 1); start.setHours(0,0,0,0);
+                        end = new Date(now.getFullYear(), now.getMonth()+1, 1); end.setHours(0,0,0,0);
+                    }
+                    console.log('Processando gestor:', usuario, 'intervalo:', start?.toISOString(), 'a', end?.toISOString());
+                    const inMonth = (d) => { if (!d || isNaN(d.getTime())) return false; const d0 = new Date(d); d0.setHours(0,0,0,0); return (d0 >= start && d0 < end); };
+                    data.forEach(os => {
+                        const situacao = String(os['Situacao OS'] || '').toLowerCase();
+                        if (!situacao.includes('abert')) return;
+                        let dEmissao = parseDate(os.Emissao);
+                        if (!dEmissao || isNaN(dEmissao.getTime())) {
+                            const diRaw = os.Dias;
+                            const di = (diRaw !== undefined && diRaw !== null) ? parseInt(String(diRaw).trim(), 10) : NaN;
+                            if (!isNaN(di) && di >= 0) {
+                                const today = new Date(); today.setHours(0,0,0,0);
+                                dEmissao = new Date(today); dEmissao.setDate(today.getDate() - di);
+                            }
+                        }
+                        if (!dEmissao || isNaN(dEmissao.getTime())) return;
+                        const dias = calcularDiasEmAberto(os);
+                        const tipo = os.Tipo?.toLowerCase() || 'externa';
+                        // filtro por abas (tipos)
+                        if (tipos && Array.isArray(tipos) && tipos.length && !tipos.includes(tipo)) return;
+                        // normaliza revenda para código
+                        const revCode = getRevendaCode(String(os.Revenda)) || String(os.Revenda);
+                        const atual = getEscalonamento(tipo, dias, revCode);
+                        // Considera mês por Emissão OU pela data de início da faixa de escalonamento do responsável atual
+                        const inicioAtual = getInicioEscalonamento(tipo, atual, revCode);
+                        const limiteAtual = getLimiteEscalonamento(tipo, atual);
+                        const crossStart = new Date(dEmissao); if (Number.isFinite(inicioAtual)) crossStart.setDate(crossStart.getDate() + Math.max(0, inicioAtual)); crossStart.setHours(0,0,0,0);
+                        const crossLimit = new Date(dEmissao); if (Number.isFinite(limiteAtual)) crossLimit.setDate(crossLimit.getDate() + Math.max(0, limiteAtual)); crossLimit.setHours(0,0,0,0);
+                        const selectedMonthOk = inMonth(dEmissao) || inMonth(crossStart) || inMonth(crossLimit);
+                        if (tipo === 'interna' && String(revCode) === '3' && dias >= 11) {
+                            console.log('Interna Fortaleza OS:', String(os['Numero OS']||'').trim(), 'dias:', dias, 'atual:', atual, 'inMonth:', selectedMonthOk, 'emissao:', dEmissao?.toISOString());
+                        }
+                        if (!selectedMonthOk) return;
+                        if (normalizeNomeResponsavel(atual) === normalizeNomeResponsavel(usuario)) {
+                            const anterior = historicoEscalonamento[os.Chave || os.Cahve];
+                            const allowedPrevious = getAllowedPrevious(usuario, tipo, revCode, dias);
+                            let prevOk = false;
+                            if (allowedPrevious) {
+                                const anteriorNorm = normalizeNomeResponsavel(anterior);
+                                const allowedNorm = normalizeNomeResponsavel(allowedPrevious);
+                                if (anteriorNorm) prevOk = anteriorNorm === allowedNorm; else {
+                                    const prevByDias = getPrevEscalonamentoByDias(tipo, dias, revCode);
+                                    prevOk = normalizeNomeResponsavel(prevByDias) === allowedNorm;
+                                }
+                            } else {
+                                prevOk = normalizeNomeResponsavel(anterior) !== normalizeNomeResponsavel(usuario);
+                            }
+                            const inicioResp = getInicioEscalonamento(tipo, usuario, revCode);
+                            const atingiuFaixa = Number.isFinite(inicioResp) ? (dias >= inicioResp) : true;
+                            if (prevOk || atingiuFaixa) escalonadasRaw.push(os);
+                        }
+                        const proximo = getProximoEscalonamento(tipo, dias, revCode);
+                        if (normalizeNomeResponsavel(proximo) === normalizeNomeResponsavel(usuario)) {
+                            const falta = getLimiteEscalonamento(tipo, usuario) - dias;
+                            // Para "próximas", considera mês da emissão ou do início da faixa do próximo responsável
+                            const inicioProx = getInicioEscalonamento(tipo, usuario, revCode);
+                            const crossProxStart = new Date(dEmissao); if (Number.isFinite(inicioProx)) crossProxStart.setDate(crossProxStart.getDate() + Math.max(0, inicioProx)); crossProxStart.setHours(0,0,0,0);
+                            if (falta <= info.dias && (inMonth(dEmissao) || inMonth(crossProxStart))) proximasRaw.push(os);
+                        }
+                    });
+                    const prevSetE = info.email ? await getPreviouslyNotifiedOSNumbers({ tipo: 'nova_os_escalonada', usuario, destinatario: info.email, windowMinutes: null, limit: 2000 }) : new Set();
+                    const prevSetP = info.email ? await getPreviouslyNotifiedOSNumbers({ tipo: 'alerta_escalonamento_proximo', usuario, destinatario: info.email, windowMinutes: null, limit: 2000 }) : new Set();
+                    const escalonadas_novas = escalonadasRaw.filter(os => {
+                        const n = String(os['Numero OS']||'').trim();
+                        return n && !prevSetE.has(n);
+                    });
+                    const escalonadas_enviadas = escalonadasRaw.filter(os => {
+                        const n = String(os['Numero OS']||'').trim();
+                        return n && prevSetE.has(n);
+                    });
+                    const proximas_novas = proximasRaw.filter(os => {
+                        const n = String(os['Numero OS']||'').trim();
+                        return n && !prevSetP.has(n);
+                    });
+                    const proximas_enviadas = proximasRaw.filter(os => {
+                        const n = String(os['Numero OS']||'').trim();
+                        return n && prevSetP.has(n);
+                    });
+                    console.log('Resumo gestor:', usuario, 'esc_novas:', escalonadas_novas.length, 'esc_enviadas:', escalonadas_enviadas.length, 'prox_novas:', proximas_novas.length, 'prox_enviadas:', proximas_enviadas.length);
+                    groups.set(usuario, { email: info.email, escalonadas: escalonadas_novas, escalonadas_enviadas: escalonadas_enviadas, proximas: proximas_novas, proximas_enviadas: proximas_enviadas });
+                }
+            } catch(_) {}
+            return groups;
+        }
+
+        function renderManagersEmailPreview(groups) {
+            try {
+                const el = document.getElementById('gestores-email-preview');
+                const b1 = document.getElementById('btn-send-managers-escalonadas');
+                const b2 = document.getElementById('btn-send-managers-proximas');
+                if (!el) return;
+                const entries = Array.from(groups.entries());
+                const totalEscNovas = entries.reduce((s,[,g]) => s + ((g.escalonadas||[]).length), 0);
+                const totalEscEnviadas = entries.reduce((s,[,g]) => s + ((g.escalonadas_enviadas||[]).length), 0);
+                const totalProxNovas = entries.reduce((s,[,g]) => s + ((g.proximas||[]).length), 0);
+                const totalProxEnviadas = entries.reduce((s,[,g]) => s + ((g.proximas_enviadas||[]).length), 0);
+                if (entries.length === 0 || (totalEscNovas+totalEscEnviadas === 0 && totalProxNovas+totalProxEnviadas === 0)) {
+                    el.innerHTML = '<div class="empty-state">Sem OS de Escalonamento para nenhum Gestor.</div>';
+                    if (b1) b1.disabled = true;
+                    if (b2) b2.disabled = true;
+                    return;
+                }
+                const rows = entries.map(([usuario, g]) => {
+                    const exN = (g.escalonadas||[]).map(os => String(os['Numero OS']||'').trim()).filter(Boolean).slice(0,10).join(', ');
+                    const exE = (g.escalonadas_enviadas||[]).map(os => String(os['Numero OS']||'').trim()).filter(Boolean).slice(0,10).join(', ');
+                    const prN = (g.proximas||[]).map(os => String(os['Numero OS']||'').trim()).filter(Boolean).slice(0,10).join(', ');
+                    const prE = (g.proximas_enviadas||[]).map(os => String(os['Numero OS']||'').trim()).filter(Boolean).slice(0,10).join(', ');
+                    return `<tr>
+                        <td>${usuario}</td>
+                        <td>${g.email||''}</td>
+                        <td>${(g.escalonadas||[]).length}</td>
+                        <td>${(g.escalonadas_enviadas||[]).length}</td>
+                        <td>${(g.proximas||[]).length}</td>
+                        <td>${(g.proximas_enviadas||[]).length}</td>
+                        <td>${exN}${(g.escalonadas||[]).length>10?'…':''}</td>
+                        <td>${exE}${(g.escalonadas_enviadas||[]).length>10?'…':''}</td>
+                        <td>${prN}${(g.proximas||[]).length>10?'…':''}</td>
+                        <td>${prE}${(g.proximas_enviadas||[]).length>10?'…':''}</td>
+                    </tr>`;
+                }).join('');
+                el.innerHTML = `<table><thead><tr>
+                    <th>Gestor</th><th>E-mail</th>
+                    <th>Escalonadas novas</th><th>Escalonadas já enviadas</th>
+                    <th>Próximas novas</th><th>Próximas já enviadas</th>
+                    <th>OS Escalonadas (novas)</th><th>OS Escalonadas (enviadas)</th>
+                    <th>OS Próximas (novas)</th><th>OS Próximas (enviadas)</th>
+                </tr></thead><tbody>${rows}</tbody></table>`;
+                const forceEl = document.getElementById('import-managers-force');
+                const force = !!(forceEl && forceEl.checked);
+                const anyEsc = force ? (totalEscNovas+totalEscEnviadas > 0) : (totalEscNovas > 0);
+                const anyProx = force ? (totalProxNovas+totalProxEnviadas > 0) : (totalProxNovas > 0);
+                if (b1) b1.disabled = !anyEsc;
+                if (b2) b2.disabled = !anyProx;
+            } catch(_) {}
+        }
+
+        async function sendManagersEmails(type) {
+            try {
+                const el = document.getElementById('import-managers-month');
+                const mv = el ? el.value : '';
+                const forceEl = document.getElementById('import-managers-force');
+                const force = !!(forceEl && forceEl.checked);
+                const tEl = document.getElementById('import-managers-tipos');
+                const tipos = tEl ? Array.from(tEl.selectedOptions).map(o=>o.value.toLowerCase()) : null;
+                const groups = await computeManagersEmailGroupsFromBaseByMonth(mv, force, tipos);
+                const entries = Array.from(groups.entries());
+                let enviados = 0, pulados = 0, semEmail = 0;
+                for (const [usuario, g] of entries) {
+                    const email = g.email;
+                    if (!email) { semEmail++; continue; }
+                    const list = type === 'escalonadas'
+                        ? (force ? ((g.escalonadas||[]).concat(g.escalonadas_enviadas||[])) : (g.escalonadas||[]))
+                        : (force ? ((g.proximas||[]).concat(g.proximas_enviadas||[])) : (g.proximas||[]));
+                    if (!list.length) continue;
+                    const setAll = list.map(os => String(os['Numero OS']||'').trim()).filter(Boolean);
+                    const fpAll = setAll.slice().sort((a,b)=>a.localeCompare(b)).join(',');
+                    let msgText = `Prezado(a) ${usuario},\n\n`;
+                    let msgHtml = `<p>Prezado(a) ${usuario},</p>`;
+                    let titulo = '';
+                    if (type === 'escalonadas') {
+                        titulo = '🔄 Nova OS Escalonada para Você';
+                        msgText += `Você recebeu ${list.length} nova(s) OS escalonada(s):\n\n`;
+                        msgHtml += `<p>Você recebeu <strong>${list.length}</strong> nova(s) OS escalonada(s):</p><ul>`;
+                        list.forEach(os => {
+                            const anterior = historicoEscalonamento[os.Chave || os.Cahve] || 'N/A';
+                            const dias = calcularDiasEmAberto(os);
+                            msgText += `• OS ${os['Numero OS']} - ${os.Cliente || 'N/A'} (Tipo: ${os.Tipo || '—'})\n  Responsável anterior: ${anterior}\n  Dias em aberto: ${dias} dias\n\n`;
+                            msgHtml += `<li><strong>OS ${os['Numero OS']}</strong> - ${os.Cliente || 'N/A'} <em>(Tipo: ${os.Tipo || '—'})</em><br><small>Responsável anterior: ${anterior} • Dias em aberto: ${dias} dias</small></li>`;
+                        });
+                        msgHtml += `</ul>`;
+                    } else {
+                        titulo = '⚠️ Alerta: OS Próxima de Escalonamento';
+                        msgText += `Você possui ${list.length} OS próxima(s) de escalonamento:\n\n`;
+                        msgHtml += `<p>Você possui <strong>${list.length}</strong> OS próxima(s) de escalonamento:</p><ul>`;
+                        list.forEach(os => {
+                            const tipo = os.Tipo?.toLowerCase() || 'externa';
+                            const dias = calcularDiasEmAberto(os);
+                            const proximo = getProximoEscalonamento(tipo, dias, os.Revenda);
+                            const falta = getLimiteEscalonamento(tipo, usuario) - dias;
+                            msgText += `• OS ${os['Numero OS']} - ${os.Cliente || 'N/A'} (Tipo: ${os.Tipo || '—'} | Próximo: ${proximo} | Dias: ${falta})\n`;
+                            msgHtml += `<li><strong>OS ${os['Numero OS']}</strong> - ${os.Cliente || 'N/A'} <em>(Tipo: ${os.Tipo || '—'} | Próximo: ${proximo} | Dias: ${falta})</em></li>`;
+                        });
+                        msgHtml += `</ul>`;
+                    }
+                    msgText += `Por favor, verifique e assuma as ações necessárias.\nAtenciosamente,\nSistema de Controle de OS`;
+                    msgHtml += `<p>Por favor, verifique e assuma as ações necessárias.</p><p><strong>Atenciosamente,</strong><br>Sistema de Controle de OS</p>`;
+                    let skip = false;
+                    if (!force) {
+                        const tipoReg = type === 'escalonadas' ? 'nova_os_escalonada' : 'alerta_escalonamento_proximo';
+                        skip = await shouldSkipNotificationByOSSet({ tipo: tipoReg, usuario, destinatario: email, osNumbers: setAll, windowMinutes: null })
+                            || await shouldSkipNotification({ tipo: tipoReg, usuario, destinatario: email, titulo, mensagem: msgText, windowMinutes: 180 });
+                    }
+                    const resultadoEnvio = skip ? { success: false, error: 'duplicate-skip' } : await enviarEmailReal(email, titulo, msgHtml);
+                    const reg = { tipo: (type === 'escalonadas' ? 'nova_os_escalonada' : 'alerta_escalonamento_proximo'), titulo, mensagem: `${msgText}\nFP[os=${fpAll}]`, destinatario: email, usuario, enviado: !!resultadoEnvio.success, erro: resultadoEnvio.error || null, quantidadeOS: list.length };
+                    await insertHistoricoNotificacaoSupabase(reg);
+                    enviados += resultadoEnvio.success ? 1 : 0;
+                    pulados += resultadoEnvio.success ? 0 : 1;
+                }
+                alert(`Envio concluído. Enviados: ${enviados}. Pulados/duplicados: ${pulados}. Usuários sem e-mail: ${semEmail}.`);
+            } catch(e) {
+                alert('Falha ao enviar e-mails de gestores: ' + (e?.message || 'Erro'));
+            }
+        }
         function setImportResumo(text, details = '') {
             const r = document.getElementById('import-resumo');
             const d = document.getElementById('import-detalhes');
@@ -6674,6 +7014,16 @@
                     `<div class="info">Duplicidade avaliada por "Chave+Tipo" e por "Revenda+Tipo+Numero OS" contra arquivo e Base.</div>`);
                 renderImportLists(valid, duplicates);
                 try { const groups = computeImportEmailGroups(valid.concat(duplicates)); renderImportEmailPreview(groups); } catch(_) {}
+                try {
+                    const el = document.getElementById('import-managers-month');
+                    const mv = el ? el.value : '';
+                    const forceEl = document.getElementById('import-managers-force');
+                    const force = !!(forceEl && forceEl.checked);
+                    const tEl = document.getElementById('import-managers-tipos');
+                    const tipos = tEl ? Array.from(tEl.selectedOptions).map(o=>o.value.toLowerCase()) : null;
+                    const g2 = await computeManagersEmailGroupsFromBaseByMonth(mv, force, tipos);
+                    renderManagersEmailPreview(g2);
+                } catch(_) {}
                 const btnSave = document.getElementById('btn-save-import');
                 const btnClear = document.getElementById('btn-clear-import');
                 const btnSendEmails = document.getElementById('btn-send-import-emails');
@@ -6689,6 +7039,15 @@
             setImportResumo('Aguardando arquivo ou colagem.');
             renderImportLists([], []);
             try { renderImportEmailPreview(new Map()); } catch(_) {}
+            try {
+                const el = document.getElementById('import-managers-month');
+                const mv = el ? el.value : '';
+                const forceEl = document.getElementById('import-managers-force');
+                const force = !!(forceEl && forceEl.checked);
+                const tEl = document.getElementById('import-managers-tipos');
+                const tipos = tEl ? Array.from(tEl.selectedOptions).map(o=>o.value.toLowerCase()) : null;
+                computeManagersEmailGroupsFromBaseByMonth(mv, force, tipos).then(renderManagersEmailPreview);
+            } catch(_) {}
             const btnSave = document.getElementById('btn-save-import');
             const btnClear = document.getElementById('btn-clear-import');
             const btnSendEmails = document.getElementById('btn-send-import-emails');
@@ -6789,9 +7148,15 @@
                 }
                 setImportResumo(`Importação concluída. Sucesso: ${ok}. Falhas: ${err}. Ignorados por falta de campos: ${invalidCount}.`);
                 clearImportPreview();
-            try { await loadOSData(); } catch(_) {}
-            try { await verificarEscalonamentosGestoresAuto(true); } catch(_) {}
-            try { setTimeout(() => { verificarEscalonamentosGestoresAuto(true); }, 8000); } catch(_) {}
+                try { await loadOSData(); } catch(_) {}
+                try { await verificarEscalonamentosGestoresAuto(true); } catch(_) {}
+                try { setTimeout(() => { verificarEscalonamentosGestoresAuto(true); }, 8000); } catch(_) {}
+                try {
+                    const el = document.getElementById('import-managers-month');
+                    const mv = el ? el.value : '';
+                    const g2 = await computeManagersEmailGroupsFromBaseByMonth(mv);
+                    renderManagersEmailPreview(g2);
+                } catch(_) {}
             } catch (e) {
                 const msg = e?.message || e?.details || e?.hint || 'Erro';
                 setImportResumo('Erro ao salvar na Base.', `<div class="error">${msg}</div>`);
