@@ -6,26 +6,26 @@
     <title>📋 Controle de OS Abertas</title>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script>
-        (function(){
+        document.addEventListener('DOMContentLoaded', function(){
             try {
                 var raw = localStorage.getItem('authUser');
                 var auth = raw ? JSON.parse(raw) : null;
-                // Mantém o usuário atual acessível e controla exibição da tela de login dentro do próprio index
                 window.NormaQCurrentUser = auth || null;
                 var requireLogin = !auth;
                 window.NormaQRequireLogin = requireLogin;
-                // Usa uma classe na raiz para controlar visibilidade via CSS
                 document.documentElement.classList.toggle('require-login', requireLogin);
-                try {
+                if (auth) {
                     var el = document.getElementById('user-name');
-                    if (el && auth) { el.textContent = auth.nome_completo || auth.usuario || 'Usuário'; }
-                } catch(_){}
+                    if (el) el.textContent = auth.nome_completo || auth.usuario || 'Usuário';
+                    var userWelcome = document.querySelector('.user-welcome');
+                    if (userWelcome) userWelcome.textContent = 'Olá,';
+                }
             } catch (e) {
                 window.NormaQCurrentUser = null;
                 window.NormaQRequireLogin = true;
                 document.documentElement.classList.add('require-login');
             }
-        })();
+        });
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
@@ -2082,11 +2082,12 @@
                 document.documentElement.classList.remove('require-login');
                 setLoading(false);
                 showFeedback('Login efetuado com sucesso!', false);
+                try { updateUserNameDisplay(); } catch(_) {}
                 // Registra o login na fonte de logs (fallback localStorage para garantir)
                 try {
-                  const payload = {
-                    usuario: authUser.usuario,
-                    nome_completo: authUser.nome_completo,
+                    const payload = {
+                        usuario: authUser.usuario,
+                        nome_completo: authUser.nome_completo,
                     tipo_usuario: authUser.tipo_usuario,
                     pagina: 'login',
                     created_at: new Date().toISOString()
@@ -2097,6 +2098,7 @@
                 } catch(_) {}
                 if (window.applyUserAccessControl) window.applyUserAccessControl();
                 if (window.checkPrimeiroLoginThenShowModal) window.checkPrimeiroLoginThenShowModal();
+                try { loadOSData(); } catch(_) {}
                 return;
               }
               showFeedback('Usuário/E-mail não encontrado.', true); setLoading(false); return;
@@ -2148,11 +2150,12 @@
             document.documentElement.classList.remove('require-login');
             setLoading(false);
             showFeedback('Login efetuado com sucesso!', false);
+            try { updateUserNameDisplay(); } catch(_) {}
             // Registra o login na fonte de logs (fallback localStorage para garantir)
             try {
-              const payload = {
-                usuario: authUser.usuario,
-                nome_completo: authUser.nome_completo,
+                const payload = {
+                    usuario: authUser.usuario,
+                    nome_completo: authUser.nome_completo,
                 tipo_usuario: authUser.tipo_usuario,
                 pagina: 'login',
                 created_at: new Date().toISOString()
@@ -2164,6 +2167,7 @@
             // Ajusta acesso às tabs conforme perfil e força troca de senha, se necessário
             if (window.applyUserAccessControl) window.applyUserAccessControl();
             if (window.checkPrimeiroLoginThenShowModal) window.checkPrimeiroLoginThenShowModal();
+            try { loadOSData(); } catch(_) {}
           } catch (err) {
             console.error('Erro login:', err);
             showFeedback('Erro inesperado ao autenticar.', true);
@@ -2204,22 +2208,21 @@
           }
         }
 
-        if (window.NormaQRequireLogin) {
+        document.addEventListener('DOMContentLoaded', function(){
           const enter = (ev)=>{ if (ev.key==='Enter') doLogin(); };
-          els.user.addEventListener('keydown', enter);
-          els.pass.addEventListener('keydown', enter);
-          els.btn.addEventListener('click', doLogin);
-          // Info modal
-          els.infoBtn.addEventListener('click', ()=>{ els.infoModal.style.display = 'flex'; });
-          els.infoClose.addEventListener('click', ()=>{ els.infoModal.style.display = 'none'; });
-          els.infoCloseBottom.addEventListener('click', ()=>{ els.infoModal.style.display = 'none'; });
-          // Reset card
-          els.resetBtn.addEventListener('click', ()=>{
+          if (els.user) els.user.addEventListener('keydown', enter);
+          if (els.pass) els.pass.addEventListener('keydown', enter);
+          if (els.btn) els.btn.addEventListener('click', doLogin);
+          if (els.infoBtn) els.infoBtn.addEventListener('click', ()=>{ els.infoModal.style.display = 'flex'; });
+          if (els.infoClose) els.infoClose.addEventListener('click', ()=>{ els.infoModal.style.display = 'none'; });
+          if (els.infoCloseBottom) els.infoCloseBottom.addEventListener('click', ()=>{ els.infoModal.style.display = 'none'; });
+          if (els.resetBtn) els.resetBtn.addEventListener('click', ()=>{
             const card = document.getElementById('auth-reset-card');
-            card.style.display = card.style.display === 'none' ? 'block' : 'none';
+            if (card) card.style.display = card.style.display === 'none' ? 'block' : 'none';
           });
-          document.getElementById('auth-reset-send').addEventListener('click', requestPasswordReset);
-        }
+          const resetSend = document.getElementById('auth-reset-send');
+          if (resetSend) resetSend.addEventListener('click', requestPasswordReset);
+        });
       })();
     </script>
     <button id="btn-logout" class="logout-fab" title="Sair">Sair</button>
@@ -3162,8 +3165,8 @@
             alert('Erro: Biblioteca Supabase não carregada. Verifique a conexão com a internet.');
         }
         
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-        console.log('Supabase inicializado:', !!supabase);
+        window.supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        console.log('Supabase inicializado:', !!window.supabase);
         const tabelaBase = 'Base_OS';
         const tabelaStatus = 'status_customizados';
 
@@ -3430,25 +3433,16 @@
 
         function updateDateTime() {
             const now = new Date();
-            
-            // Formata hora
-            const time = now.toLocaleTimeString('pt-BR', { 
-                hour: '2-digit', 
-                minute: '2-digit',
-                hour12: false 
-            });
-            
-            // Formata data
-            const date = now.toLocaleDateString('pt-BR');
-            
-            // Formata dia da semana
+            const time = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', hour12: false });
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const year = now.getFullYear();
+            const date = `${day}/${month}/${year}`;
             const days = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-            const day = days[now.getDay()];
-            
-            // Atualiza elementos HTML
+            const dayName = days[now.getDay()];
             document.getElementById('current-time').textContent = time;
             document.getElementById('current-date').textContent = date;
-            document.getElementById('current-day').textContent = day;
+            document.getElementById('current-day').textContent = dayName;
         }
 
         // NOVO: Função para atualizar o indicador de última atualização
@@ -3464,6 +3458,13 @@
                 second: '2-digit'
             });
             document.getElementById('last-update-time').textContent = formattedTime;
+        }
+
+        function isAbortError(error) {
+            try {
+                const msg = String((error && (error.message || error.name || error.toString())) || '').toLowerCase();
+                return msg.includes('abort') || msg.includes('err_aborted');
+            } catch (_) { return false; }
         }
 
         /**
@@ -4703,10 +4704,17 @@
 
         // --- INICIALIZAÇÃO ---
         document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const u = window.NormaQCurrentUser || (JSON.parse(localStorage.getItem('authUser')) || null);
+                const requireLogin = !u;
+                window.NormaQRequireLogin = requireLogin;
+                document.documentElement.classList.toggle('require-login', requireLogin);
+            } catch(_) {}
             initializeTabs();
             setupEventListeners();
             applyUserAccessControl();
             try { updateUserNameDisplay(); } catch(_) {}
+            try { await testSupabaseConnection(); } catch(_) {}
             // Log de visita à página (proatividade)
             try { await logPageVisit(); } catch(e) { console.warn('Falha ao registrar visita:', e); }
             try { await startUserSession(); } catch(e) {}
@@ -5263,12 +5271,10 @@
         function applyUserAccessControl() {
             try {
                 const user = window.NormaQCurrentUser || (JSON.parse(localStorage.getItem('authUser')) || null);
-                // Normaliza o tipo de usuário para comparação robusta (sem acento, minúsculo)
                 const normalize = s => (s || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-                const tipoNorm = normalize(user && user.tipo_usuario);
-                const isAdmin = !!(user && (user.is_admin || tipoNorm === 'administrador' || tipoNorm === 'admin' || tipoNorm === 'administrator' || tipoNorm === 'adm'));
-                const isGestor = !!(user && (tipoNorm === 'gestor'));
-                const isUsuario = !!(user && (tipoNorm === 'usuario'));
+                const isAdmin = !!(user && (user.is_admin || user.tipo_usuario === 'Administrador'));
+                const isGestor = !!(user && user.tipo_usuario === 'Gestor');
+                const isUsuario = !!(user && user.tipo_usuario === 'Usuário');
                 // Whitelist para acesso à aba Atualização
                 const nomeNorm = normalize(user && (user.nome_completo || user.usuario));
                 const UPDATE_WHITELIST = ['isabelle','ana leya','flavia','giovana','bruna','graziela','johnny','wanderley'];
@@ -5516,6 +5522,10 @@
         function updateUserNameDisplay() {
             const user = getCurrentUserInfo();
             const userNameElement = document.getElementById('user-name');
+            const userWelcomeElement = document.querySelector('.user-welcome');
+            if (userWelcomeElement) {
+                userWelcomeElement.textContent = 'Olá,';
+            }
             if (userNameElement && user) {
                 userNameElement.textContent = user.nome_completo || user.usuario;
             }
@@ -5524,13 +5534,12 @@
         function getCurrentUserInfo() {
             const user = window.NormaQCurrentUser || (JSON.parse(localStorage.getItem('authUser')) || null);
             if (!user) return null;
-            const tipoNorm = (user.tipo_usuario || '').toString().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
             return {
                 id: user.id,
                 nome_completo: user.nome_completo,
                 usuario: user.usuario,
                 tipo_usuario: user.tipo_usuario,
-                is_admin: !!(user.is_admin || ['administrador','admin','administrator','adm'].includes(tipoNorm)),
+                is_admin: !!(user.is_admin || user.tipo_usuario === 'Administrador'),
                 empresa_id: user.empresa_id || null
             };
         }
@@ -8095,26 +8104,40 @@
                 console.log('Carregando dados para tipo:', tipo, 'da tabela:', tabelaBase);
                 const { data, error } = await supabase.from(tabelaBase).select('*').eq('Tipo', tipo);
                 if (error) {
+                    if (isAbortError(error)) return;
+                    const msg = String(error.message || '').toLowerCase();
+                    if (msg.includes('failed to fetch')) return;
                     console.error('Erro do Supabase:', error);
                     throw error;
                 }
                 console.log('Dados recebidos do Supabase:', data ? data.length : 0, 'registros');
                 if (data && data.length > 0) {
-                    console.log('Primeira OS exemplo:', data[0]);
+                    osData[currentTab] = data || [];
+                    showSuccessMessage(`${data.length} OS do tipo "${tipo}" carregadas.`);
+                    await renderTable(currentTab);
+                    updateTotals(currentTab);
+                    evaluateIncreaseAndUpdateIndicators(currentTab, (data || []).length);
+                    applyColumnVisibility();
+                } else {
+                    const tbody = document.getElementById(`tbody-${currentTab}`);
+                    const countEl = document.getElementById(`count-${currentTab}`);
+                    if (tbody) {
+                        tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; padding: 20px;">Nenhuma OS encontrada para o tipo "${tipo}"</td></tr>`;
+                    }
+                    if (countEl) {
+                        countEl.textContent = '0 OS encontradas';
+                    }
+                    showErrorMessage(`Nenhuma OS encontrada para o tipo "${tipo}"`);
                 }
-                osData[currentTab] = data || [];
-                showSuccessMessage(`${data.length} OS do tipo "${tipo}" carregadas.`);
-                await renderTable(currentTab);
-                updateTotals(currentTab);
-                // Atualiza indicadores APENAS se houve aumento na contagem
-                evaluateIncreaseAndUpdateIndicators(currentTab, (data || []).length);
-                applyColumnVisibility();
-
-                // Exibir notificação de transferência iminente após login/carregamento
                 try { await showTransferenciaToastIfNeeded(); } catch(_) {}
             } catch (error) {
+                if (isAbortError(error)) return;
                 console.error('Erro completo no loadOSData:', error);
                 showErrorMessage(`Erro ao carregar dados: ${error.message}`);
+                const tbody = document.getElementById(`tbody-${currentTab}`);
+                if (tbody) {
+                    tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; padding: 20px; color: #dc3545;">Erro ao carregar dados: ${error.message || 'Erro desconhecido'}</td></tr>`;
+                }
             }
         }
 
@@ -9087,6 +9110,37 @@ function getPrevEscalonamentoByDias(tipo, dias, revenda) {
             if (err) err.style.display = 'none';
             if (ok) ok.style.display = 'none';
         }
+        async function updateByKey(osId, updateData) {
+            let lastErr = null;
+            try {
+                const { error } = await supabase.from(tabelaBase).update(updateData).eq('Chave', osId);
+                if (!error) return;
+                lastErr = error;
+            } catch (e) { lastErr = e; }
+            const { error: e2 } = await supabase.from(tabelaBase).update(updateData).eq('Cahve', osId);
+            if (e2) throw e2;
+        }
+        async function testSupabaseConnection() {
+            try {
+                console.log('Testando conexão com Supabase...');
+                const { count, error } = await supabase
+                    .from(tabelaBase)
+                    .select('*', { count: 'exact', head: true });
+                if (error) {
+                    if (isAbortError(error)) return false;
+                    console.error('Erro na conexão Supabase:', error);
+                    showErrorMessage(`Erro de conexão: ${error.message}`);
+                    return false;
+                }
+                console.log('Conexão com Supabase OK, linhas:', count);
+                return true;
+            } catch (error) {
+                if (isAbortError(error)) return false;
+                console.error('Erro ao testar conexão:', error);
+                showErrorMessage(`Falha na conexão: ${error.message}`);
+                return false;
+            }
+        }
         
         // --- CORREÇÃO DOS TOTAIS ---
         function updateTotals(tab) {
@@ -9132,6 +9186,7 @@ function getPrevEscalonamentoByDias(tipo, dias, revenda) {
                 // Gera gráficos
                 generateCharts(filteredData);
             } catch (error) {
+                if (isAbortError(error)) return;
                 console.error('Erro ao carregar dados do dashboard:', error);
             }
         }
