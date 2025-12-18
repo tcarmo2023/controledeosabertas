@@ -3655,6 +3655,29 @@
             return false;
         }
 
+        function toPlainText(html) {
+            const s = String(html || '');
+            const r = s
+                .replace(/<br\s*\/>/gi, '\n')
+                .replace(/<br\s*>/gi, '\n')
+                .replace(/<\/p>/gi, '\n')
+                .replace(/<li>/gi, '• ')
+                .replace(/<\/li>/gi, '\n');
+            const noTags = r.replace(/<[^>]+>/g, '');
+            return noTags.replace(/\n{3,}/g, '\n\n').trim();
+        }
+        async function copyHtmlToClipboard(html, text) {
+            try {
+                const item = new ClipboardItem({
+                    'text/html': new Blob([String(html||'')], { type: 'text/html' }),
+                    'text/plain': new Blob([String(text||'')], { type: 'text/plain' })
+                });
+                await navigator.clipboard.write([item]);
+            } catch (e) {
+                try { await navigator.clipboard.writeText(String(text||'')); } catch(_) {}
+            }
+        }
+
         /**
          * Envia e-mail usando EmailJS - FUNÇÃO ÚNICA PARA AMBOS OS TIPOS
          * Retorna { success: boolean, error?: any }
@@ -3697,15 +3720,23 @@
                         emailjsConfig.publicKey
                     );
                     return { success: true };
-            } catch (e2) {
-                const detalhe = e2?.text || e2?.message || JSON.stringify(e2);
-                const known = (String(detalhe || '').toLowerCase().includes('recipients address is empty'));
-                const hint = known
-                    ? 'Template EmailJS sem destinatário. No painel do EmailJS, abra o template "template_d1ec1cc" e mapeie o campo "To email" para {{to_email}} (ou {{to}}). Em Allowed Origins inclua o domínio atual (ex.: http://127.0.0.1:5504).'
-                    : detalhe;
-                return { success: false, error: hint };
+                } catch (e2) {
+                    const detalhe = e2?.text || e2?.message || JSON.stringify(e2);
+                    const known = (String(detalhe || '').toLowerCase().includes('recipients address is empty'));
+                    const hint = known
+                        ? 'Template EmailJS sem destinatário. No painel do EmailJS, abra o template "template_d1ec1cc" e mapeie o campo "To email" para {{to_email}} (ou {{to}}). Em Allowed Origins inclua o domínio atual (ex.: http://127.0.0.1:5504).'
+                        : detalhe;
+                    try {
+                        const subj = encodeURIComponent(assunto || 'Alerta de Escalonamento');
+                        const htmlFooter = String(mensagem || '') + '<p><small>Email sent via <a href="https://www.emailjs.com/" target="_blank">EmailJS.com</a></small></p>';
+                        const plain = toPlainText(htmlFooter);
+                        await copyHtmlToClipboard(htmlFooter, plain);
+                        const link = `mailto:${email}?subject=${subj}`;
+                        window.open(link, '_blank');
+                    } catch(_) {}
+                    return { success: false, error: hint };
+                }
             }
-        }
         }
 
         /**
@@ -4446,6 +4477,20 @@
             return '';
         }
 
+        function setDefaultEscalonamentoFilterForUser() {
+            const user = getCurrentUserInfo();
+            if (!user) return;
+            const isAdmin = !!(user.is_admin || user.tipo_usuario === 'Administrador');
+            const isGestor = String(user.tipo_usuario||'').toLowerCase() === 'gestor';
+            if (isAdmin || isGestor) return;
+            const resp = getResponsavelAtualFromUser(user);
+            if (!resp) return;
+            ['externa','interna','garantia'].forEach(tab => {
+                const sel = document.getElementById(`filter-escalonamento-${tab}`);
+                if (sel) sel.value = resp;
+            });
+        }
+
         // Limite em dias por responsável e tipo (usado para alerta de 5 dias)
         function getEscalonamentoLimit(tipo, responsavel, revenda) {
             const rev = (revenda || '').toString();
@@ -4714,6 +4759,7 @@
             setupEventListeners();
             applyUserAccessControl();
             try { updateUserNameDisplay(); } catch(_) {}
+            try { setDefaultEscalonamentoFilterForUser(); } catch(_) {}
             try { await testSupabaseConnection(); } catch(_) {}
             // Log de visita à página (proatividade)
             try { await logPageVisit(); } catch(e) { console.warn('Falha ao registrar visita:', e); }
@@ -5087,6 +5133,38 @@
             if (btnClearImport) btnClearImport.addEventListener('click', clearImportPreview);
             const btnSendImportEmails = document.getElementById('btn-send-import-emails');
             if (btnSendImportEmails) btnSendImportEmails.addEventListener('click', sendImportEmailsFromPreview);
+            const importPreviewContainer = document.getElementById('import-email-preview');
+            if (importPreviewContainer) {
+                importPreviewContainer.addEventListener('click', async (ev) => {
+                    const t = ev.target.closest('.btn-send-user-import-email');
+                    if (t) {
+                        const u = t.dataset.usuario || '';
+                        await sendImportEmailForUserFromPreview(u);
+                    }
+                    const editBtn = ev.target.closest('.btn-edit-email');
+                    if (editBtn) {
+                        const u = editBtn.dataset.usuario || '';
+                        const editor = importPreviewContainer.querySelector(`.inline-email-editor[data-usuario="${u}"]`);
+                        if (editor) editor.style.display = editor.style.display === 'none' ? '' : 'none';
+                    }
+                    const saveBtn = ev.target.closest('.btn-save-email');
+                    if (saveBtn) {
+                        const u = saveBtn.dataset.usuario || '';
+                        const input = importPreviewContainer.querySelector(`.inline-email-input[data-usuario="${u}"]`);
+                        const email = input ? input.value.trim() : '';
+                        if (!/.+@.+\..+/.test(email)) { alert('Informe um e-mail válido.'); return; }
+                        try {
+                            await upsertAlertaSupabase({ usuario: decodeURIComponent(u), email, dias: 5, ativo: true });
+                            await refreshAlertasByUserCache();
+                            const items = (importPreviewState.valid || []).concat(importPreviewState.duplicates || []);
+                            const groups = computeImportEmailGroups(items);
+                            renderImportEmailPreview(groups);
+                        } catch (e) {
+                            alert('Falha ao salvar e-mail: ' + (e?.message || 'Erro'));
+                        }
+                    }
+                });
+            }
             const btnManagersEsc = document.getElementById('btn-send-managers-escalonadas');
             const btnManagersProx = document.getElementById('btn-send-managers-proximas');
             const managersMonthEl = document.getElementById('import-managers-month');
@@ -6628,12 +6706,36 @@
                     if (btn) btn.disabled = true;
                     return;
                 }
-                const rows = entries.map(([usuario, list]) => {
-                    const nums = list.map(x => x.numero).filter(Boolean).slice(0, 20).join(', ');
-                    return `<tr><td>${usuario}</td><td>${list.length}</td><td>${nums}${list.length>20?'…':''}</td></tr>`;
-                }).join('');
-                el.innerHTML = `<table><thead><tr><th>Responsável</th><th>Qtd OS</th><th>OS (parcial)</th></tr></thead><tbody>${rows}</tbody></table>`;
-                if (btn) btn.disabled = entries.every(([,list]) => list.length === 0);
+                getAlertasByUserMapCache().then(byUser => {
+                    const rows = entries.map(([usuario, list]) => {
+                        const nums = list.map(x => x.numero).filter(Boolean).slice(0, 20).join(', ');
+                        const uEnc = encodeURIComponent(usuario);
+                        const email = byUser.get(usuario) || '';
+                        const emailCell = email ? `<span>${email}</span> <button class=\"btn btn-secondary btn-sm btn-edit-email\" data-usuario=\"${uEnc}\">Editar</button>`
+                                                : `<span style=\"color:#dc3545;\">Sem e-mail</span> <button class=\"btn btn-secondary btn-sm btn-edit-email\" data-usuario=\"${uEnc}\">Adicionar</button>`;
+                        const editInline = `<div class=\"inline-email-editor\" data-usuario=\"${uEnc}\" style=\"display:none; margin-top:6px;\">`
+                            + `<input type=\"email\" class=\"inline-email-input\" data-usuario=\"${uEnc}\" placeholder=\"email@exemplo.com\" value=\"${email}\" style=\"padding:6px;\">`
+                            + ` <button class=\"btn btn-primary btn-sm btn-save-email\" data-usuario=\"${uEnc}\">Salvar</button>`
+                            + `</div>`;
+                        return `<tr>`
+                            + `<td>${usuario}</td>`
+                            + `<td>${list.length}</td>`
+                            + `<td>${nums}${list.length>20?'…':''}</td>`
+                            + `<td>${emailCell}${editInline}</td>`
+                            + `<td><button class=\"btn btn-secondary btn-sm btn-send-user-import-email\" data-usuario=\"${uEnc}\">Enviar</button></td>`
+                            + `</tr>`;
+                    }).join('');
+                    el.innerHTML = `<table><thead><tr><th>Responsável</th><th>Qtd OS</th><th>OS (parcial)</th><th>E-mail</th><th>Ação</th></tr></thead><tbody>${rows}</tbody></table>`;
+                    if (btn) btn.disabled = entries.every(([,list]) => list.length === 0);
+                }).catch(() => {
+                    const rows = entries.map(([usuario, list]) => {
+                        const nums = list.map(x => x.numero).filter(Boolean).slice(0, 20).join(', ');
+                        const uEnc = encodeURIComponent(usuario);
+                        return `<tr><td>${usuario}</td><td>${list.length}</td><td>${nums}${list.length>20?'…':''}</td><td><span style=\"color:#dc3545;\">Sem e-mail</span></td><td><button class=\"btn btn-secondary btn-sm btn-send-user-import-email\" data-usuario=\"${uEnc}\">Enviar</button></td></tr>`;
+                    }).join('');
+                    el.innerHTML = `<table><thead><tr><th>Responsável</th><th>Qtd OS</th><th>OS (parcial)</th><th>E-mail</th><th>Ação</th></tr></thead><tbody>${rows}</tbody></table>`;
+                    if (btn) btn.disabled = entries.every(([,list]) => list.length === 0);
+                });
             } catch(_) {}
         }
         async function sendImportEmailsFromPreview() {
@@ -6645,7 +6747,18 @@
                     try { alertas = await seedAlertasIfEmpty(); } catch(_) {}
                 }
                 const byUser = new Map();
-                (alertas||[]).forEach(a => { if (a && a.usuario && a.email && a.ativo !== false) byUser.set(a.usuario, a.email); });
+                (alertas||[]).forEach(a => {
+                    if (!a || !a.usuario || !a.email || a.ativo === false) return;
+                    const u = String(a.usuario);
+                    const email = a.email;
+                    byUser.set(u, email);
+                    if (u.includes(',')) {
+                        u.split(',').map(s=>s.trim()).forEach(n=>{ if (n) byUser.set(n, email); });
+                    }
+                    if (u.includes(' e ')) {
+                        u.split(' e ').map(s=>s.trim()).forEach(n=>{ if (n) byUser.set(n, email); });
+                    }
+                });
                 const groups = computeImportEmailGroups(items);
                 const entries = Array.from(groups.entries());
                 const forceEl = document.getElementById('import-email-force');
@@ -6688,6 +6801,49 @@
                 alert(`Envio concluído. Enviados: ${enviados}. Pulados/duplicados: ${pulados}. Usuários sem e-mail: ${semEmail}.`);
             } catch (e) {
                 alert('Falha ao enviar e-mails: ' + (e?.message || 'Erro'));
+            }
+        }
+
+        async function sendImportEmailForUserFromPreview(usuarioRaw) {
+            try {
+                if (!usuarioRaw) { alert('Responsável inválido.'); return; }
+                const usuario = decodeURIComponent(usuarioRaw);
+                const items = (importPreviewState.valid || []).concat(importPreviewState.duplicates || []);
+                if (!items.length) { alert('Nenhuma OS para enviar.'); return; }
+                let alertas = await fetchAlertasConfigSupabase();
+                if (!alertas || alertas.length === 0) {
+                    try { alertas = await seedAlertasIfEmpty(); } catch(_) {}
+                }
+                const byUser = new Map();
+                (alertas||[]).forEach(a => {
+                    if (!a || !a.usuario || !a.email || a.ativo === false) return;
+                    const u = String(a.usuario);
+                    const email = a.email;
+                    byUser.set(u, email);
+                    if (u.includes(',')) { u.split(',').map(s=>s.trim()).forEach(n=>{ if (n) byUser.set(n, email); }); }
+                    if (u.includes(' e ')) { u.split(' e ').map(s=>s.trim()).forEach(n=>{ if (n) byUser.set(n, email); }); }
+                });
+                const groups = computeImportEmailGroups(items);
+                const list = groups.get(usuario) || [];
+                if (!list.length) { alert('Nenhuma OS para este responsável.'); return; }
+                const email = byUser.get(usuario);
+                if (!email) { alert('Responsável sem e-mail configurado.'); return; }
+                const setAll = Array.from(new Set(list.map(x => x.numero).filter(Boolean)));
+                const fpAll = setAll.slice().sort((a,b)=>a.localeCompare(b)).join(',');
+                const titulo = 'Alerta de Escalonamento - Sistema OS NORMAQ';
+                let msgText = `Prezado(a) ${usuario},\n\nVocê recebeu ${list.length} nova(s) OS importada(s) sob sua responsabilidade:\n\n`;
+                let msgHtml = `<p>Prezado(a) ${usuario},</p><p>Você recebeu <strong>${list.length}</strong> nova(s) OS importada(s) sob sua responsabilidade:</p><ul>`;
+                list.forEach(x => {
+                    msgText += `• OS ${x.numero} - ${x.cliente || 'N/A'} (Tipo: ${x.tipo || '—'} • Dias: ${x.dias})\n`;
+                    msgHtml += `<li><strong>OS ${x.numero}</strong> - ${x.cliente || 'N/A'} <em>(Tipo: ${x.tipo || '—'} • Dias: ${x.dias})</em></li>`;
+                });
+                msgHtml += `</ul><p>Por favor, verifique e assuma as ações necessárias.</p><p><strong>Atenciosamente,</strong><br>Sistema de Controle de OS</p>`;
+                const resultadoEnvio = await enviarEmailReal(email, titulo, msgHtml);
+                const reg = { tipo: 'alerta_unico_usuario', titulo, mensagem: `${msgText}\nFP[os=${fpAll}]`, destinatario: email, usuario, enviado: !!resultadoEnvio.success, erro: resultadoEnvio.error || null, quantidadeOS: list.length };
+                await insertHistoricoNotificacaoSupabase(reg);
+                alert(resultadoEnvio.success ? `E-mail enviado para ${usuario}.` : `Falha ou bloqueio no envio para ${usuario}.`);
+            } catch (e) {
+                alert('Falha ao enviar e-mail: ' + (e?.message || 'Erro'));
             }
         }
 
@@ -9706,6 +9862,30 @@ function getPrevEscalonamentoByDias(tipo, dias, revenda) {
                 localStorage.setItem('alertasConfig', JSON.stringify(alertas));
                 return true;
             }
+        }
+
+        let alertasByUserCache = null;
+        async function getAlertasByUserMapCache() {
+            try {
+                if (alertasByUserCache) return alertasByUserCache;
+                let alertas = await fetchAlertasConfigSupabase();
+                if (!Array.isArray(alertas)) alertas = [];
+                const byUser = new Map();
+                (alertas||[]).forEach(a => {
+                    if (!a || !a.usuario || !a.email || a.ativo === false) return;
+                    const u = String(a.usuario);
+                    const email = a.email;
+                    byUser.set(u, email);
+                    if (u.includes(',')) { u.split(',').map(s=>s.trim()).forEach(n=>{ if (n) byUser.set(n, email); }); }
+                    if (u.includes(' e ')) { u.split(' e ').map(s=>s.trim()).forEach(n=>{ if (n) byUser.set(n, email); }); }
+                });
+                alertasByUserCache = byUser;
+                return byUser;
+            } catch(_) { return new Map(); }
+        }
+        async function refreshAlertasByUserCache() {
+            alertasByUserCache = null;
+            return await getAlertasByUserMapCache();
         }
 
         async function deleteAlertaSupabase(usuario) {
