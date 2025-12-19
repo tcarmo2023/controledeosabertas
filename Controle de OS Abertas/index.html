@@ -9026,7 +9026,18 @@
                     }
                 }
                 const escCalc = getEscalonamento(tab, diasEmAberto, os.Revenda);
-                if (escalonamento && escCalc !== escalonamento) return false;
+                if (escalonamento) {
+                    const tipoCalc = os.Tipo?.toLowerCase() || tab;
+                    const revCode = getRevendaCode(String(os.Revenda)) || String(os.Revenda);
+                    const chain = getEscalonamentoChain(tipoCalc, revCode);
+                    const normChain = chain.map(normalizeNomeResponsavel);
+                    const idx = normChain.indexOf(normalizeNomeResponsavel(escCalc));
+                    const prevList = idx > 0 ? chain.slice(0, idx) : [];
+                    const fNorm = normalizeNomeResponsavel(escalonamento);
+                    const matchCurrent = fNorm === normalizeNomeResponsavel(escCalc);
+                    const matchPrev = prevList.some(p => fNorm === normalizeNomeResponsavel(p));
+                    if (!matchCurrent && !matchPrev) return false;
+                }
                 // Modificado: Permite que usuários vejam OS que estão com eles E que saíram deles
                 if (restrictByUser) {
                     const escNorm = normalize(escCalc);
@@ -9373,7 +9384,18 @@ function getPrevEscalonamentoByDias(tipo, dias, revenda) {
                 // Filtro de escalonamento
                 const diasEmAberto = calcularDiasEmAberto(os);
                 const osEscalonamento = getEscalonamento(os.Tipo?.toLowerCase() || 'externa', diasEmAberto, os.Revenda);
-                if (escalonamento && osEscalonamento !== escalonamento) return false;
+                if (escalonamento) {
+                    const tipoCalc = os.Tipo?.toLowerCase() || 'externa';
+                    const revCode = getRevendaCode(String(os.Revenda)) || String(os.Revenda);
+                    const chain = getEscalonamentoChain(tipoCalc, revCode);
+                    const normChain = chain.map(normalizeNomeResponsavel);
+                    const idx = normChain.indexOf(normalizeNomeResponsavel(osEscalonamento));
+                    const prevList = idx > 0 ? chain.slice(0, idx) : [];
+                    const fNorm = normalizeNomeResponsavel(escalonamento);
+                    const matchCurrent = fNorm === normalizeNomeResponsavel(osEscalonamento);
+                    const matchPrev = prevList.some(p => fNorm === normalizeNomeResponsavel(p));
+                    if (!matchCurrent && !matchPrev) return false;
+                }
                 
                 // Filtro de tipo de OS
                 if (tipo && os.Tipo !== tipo) return false;
