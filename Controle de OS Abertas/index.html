@@ -8955,6 +8955,36 @@
 
         // --- FUNÇÕES AUXILIARES ---
 
+        if (typeof getEscalonamentoChain !== 'function') {
+            window.getEscalonamentoChain = function(tipo, revenda) {
+                const r = String(revenda || '').toString();
+                const is3 = r === '3';
+                const is1 = r === '1';
+                const is2 = r === '2';
+                const is4 = r === '4';
+                const t = (String(tipo || '').toLowerCase());
+                if (t === 'garantia') {
+                    if (is3) return ['Giovana', 'Wanderley', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+                    if (is1 || is4) return ['Flávia', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+                    if (is2) return ['Giovana', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+                    return ['Giovana', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+                }
+                if (t === 'interna') {
+                    if (is3) return ['Ana Leya', 'Wanderley', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+                    if (is1 || is2 || is4) return ['Bruna', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+                    return ['Bruna', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+                }
+                if (is3) return ['Ana Leya', 'Wanderley', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+                if (is1 || is2 || is4) return ['Isabelle', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+                return ['Isabelle', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+            }
+        }
+        if (typeof normalizeNomeResponsavel !== 'function') {
+            window.normalizeNomeResponsavel = function(s) {
+                return String(s || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            }
+        }
+
         function applyFilters(tab, data) {
             const revendaSelect = document.getElementById(`filter-revenda-${tab}`);
             const nroEl = document.getElementById(`filter-nro-os-${tab}`);
