@@ -9340,7 +9340,17 @@
                 } catch(_){ return false; }
             }
             const hasPerm = currentUser ? userHasAnyViewPermForTab(currentUser, tab) : false;
-            const restrictByUser = !!(currentUser && !(currentUser.is_admin || currentUser.tipo_usuario === 'Administrador') && currentUser.tipo_usuario !== 'Gestor' && !hasPerm);
+            function canViewOwnerForTab(user, owner, tabKey){
+                try {
+                    const map = JSON.parse(localStorage.getItem('viewPermMap')||'{}');
+                    const v = normalizeNomeResponsavel((user?.nome_completo || user?.usuario || ''));
+                    const o = normalizeNomeResponsavel(owner||'');
+                    const perms = (((map[v]||{})[o])||{});
+                    return !!perms[String(tabKey).toLowerCase()];
+                } catch(_){ return false; }
+            }
+            const ownerOverride = currentUser && escalonamento ? canViewOwnerForTab(currentUser, escalonamento, tab) : false;
+            const restrictByUser = !!(currentUser && !(currentUser.is_admin || currentUser.tipo_usuario === 'Administrador') && currentUser.tipo_usuario !== 'Gestor' && !hasPerm && !ownerOverride && !escalonamento);
             const normalize = (str) => (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
             const getUserEscLabel = (nomeCompleto) => {
                 const parts = (nomeCompleto || '').trim().split(/\s+/);
@@ -9399,7 +9409,9 @@
                     const fNorm = normalizeNomeResponsavel(escalonamento);
                     const matchCurrent = fNorm === normalizeNomeResponsavel(escCalc);
                     const matchPrev = prevList.some(p => fNorm === normalizeNomeResponsavel(p));
-                    if (!matchCurrent && !matchPrev) return false;
+                    const consNorm = normalizeNomeResponsavel(os.Consultor || '');
+                    const consMatch = consNorm.includes(fNorm);
+                    if (!matchCurrent && !matchPrev && !consMatch) return false;
                 }
                 // Modificado: Permite que usuários vejam OS que estão com eles E que saíram deles
                 if (restrictByUser) {
