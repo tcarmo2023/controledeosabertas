@@ -31,6 +31,30 @@
     <script src="https://cdn.jsdelivr.net/npm/bcryptjs@2.4.3/dist/bcrypt.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script>
+        window.addEventListener('error', function(e){
+            try {
+                const dbg = document.getElementById('debug-info');
+                if (dbg) {
+                    dbg.style.display = 'block';
+                    dbg.textContent = `Erro: ${e.message} em ${e.filename}:${e.lineno}`;
+                }
+                console.error('GlobalError', e.filename, e.lineno, e.message);
+            } catch(_) {}
+        });
+        window.addEventListener('unhandledrejection', function(e){
+            try {
+                const reason = e && e.reason;
+                const msg = (reason && (reason.message || reason.toString())) || 'Promise rejection';
+                const dbg = document.getElementById('debug-info');
+                if (dbg) {
+                    dbg.style.display = 'block';
+                    dbg.textContent = `Erro de Promise: ${msg}`;
+                }
+                console.error('UnhandledRejection', msg);
+            } catch(_) {}
+        });
+    </script>
     <style>
         :root {
             --primary-color: #FCB026;
@@ -689,6 +713,14 @@
             padding: 5px 10px;
             font-size: 11px;
         }
+        .perm-panel { display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:12px; background:#f8f9fa; border:1px solid #eee; border-radius:8px; margin-top:10px; }
+        .perm-title { font-weight:700; font-size:12px; color: var(--dark-gray); margin-right:8px; }
+        .perm-badges { display:flex; gap:6px; align-items:center; }
+        .chip { display:inline-block; padding:4px 8px; border-radius:12px; font-size:11px; font-weight:700; background:#e9ecef; color:#495057; }
+        .chip-externa { background:#e3f2fd; color:#0d47a1; }
+        .chip-interna { background:#e8f5e9; color:#1b5e20; }
+        .chip-garantia { background:#fff3e0; color:#e65100; }
+        .chip-none { background:#fdecea; color:#c62828; }
         
         .modal {
             display: none;
@@ -2527,11 +2559,11 @@
                         </select>
                     </div>
                 </div>
-                <div class="batch-actions">
-                    <button class="btn btn-primary" id="btn-carregar-os">Carregar OS Abertas</button>
-                    <span class="selected-count" id="selected-count">0 OS selecionadas</span>
-                    <button class="btn btn-success" id="btn-fechar-os" disabled>Fechar Selecionadas</button>
-                    <div class="batch-status-section">
+            <div class="batch-actions">
+                <button class="btn btn-primary" id="btn-carregar-os">Carregar OS Abertas</button>
+                <span class="selected-count" id="selected-count">0 OS selecionadas</span>
+                <button class="btn btn-success" id="btn-fechar-os" disabled>Fechar Selecionadas</button>
+                <div class="batch-status-section">
                         <div class="form-group" style="margin-bottom: 0;">
                             <select class="form-select batch-status-select" id="batch-status">
                                 <option value="">Atualizar Status para...</option>
@@ -2560,13 +2592,14 @@
                             </select>
                         </div>
                         <button class="btn btn-warning" id="btn-atualizar-status" disabled>Atualizar Status</button>
-                    </div>
-                    <button class="btn btn-warning" id="btn-limpar-selecao">Limpar</button>
-                    <div class="form-group" style="margin-left: 12px; display: flex; gap: 8px; align-items: center;">
-                        <input type="text" class="filter-input" id="batch-multi-os" placeholder="Digite vários números de OS separados por ;">
-                        <button class="btn btn-warning" id="btn-carregar-os-lista">Carregar OS</button>
-                    </div>
                 </div>
+                <button class="btn btn-warning" id="btn-limpar-selecao">Limpar</button>
+                <button class="btn btn-danger" id="btn-limpar-transferencias">Limpar observações de transferência</button>
+                <div class="form-group" style="margin-left: 12px; display: flex; gap: 8px; align-items: center;">
+                    <input type="text" class="filter-input" id="batch-multi-os" placeholder="Digite vários números de OS separados por ;">
+                    <button class="btn btn-warning" id="btn-carregar-os-lista">Carregar OS</button>
+                </div>
+            </div>
                     <div class="select-all-container">
                         <input type="checkbox" id="select-all-os">
                         <label for="select-all-os">Selecionar Todas</label>
@@ -3016,54 +3049,76 @@
 
         <!-- Aba: Cadastrar Usuários -->
         <div class="tab-content" id="cadastro-usuarios">
-            <div class="filters" style="display:block; margin-bottom:16px; background:#fff; padding:24px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
-                <h3 style="margin:0 0 12px 0">Cadastrar Novo Usuário</h3>
-                <form id="form-cadastro-usuario" class="filters" style="grid-template-columns: repeat(2, minmax(320px, 1fr)); gap:24px; align-items:start;">
-                    <input type="hidden" id="cad-user-id" />
-                    <div class="filter-group" style="flex:1; min-width:320px;">
-                        <label class="filter-label">Nome Completo *</label>
-                        <input type="text" class="filter-input" id="cad-nome-completo" placeholder="Ex.: João da Silva" required>
-                    </div>
-                    <div class="filter-group" style="flex:1; min-width:280px;">
-                        <label class="filter-label">Usuário *</label>
-                        <input type="text" class="filter-input" id="cad-usuario" placeholder="Ex.: joao.silva" required>
-                    </div>
-                    <div class="filter-group" style="flex:1; min-width:320px;">
-                        <label class="filter-label">E-mail *</label>
-                        <input type="email" class="filter-input" id="cad-email" placeholder="email@exemplo.com" required>
-                    </div>
-                    <div class="filter-group" style="flex:1; min-width:280px;">
-                        <label class="filter-label">Tipo de Usuário *</label>
-                        <select class="filter-select" id="cad-tipo-usuario" required>
-                            <option value="Administrador">Administrador</option>
-                            <option value="Gestor">Gestor</option>
-                            <option value="Usuário" selected>Usuário</option>
-                        </select>
-                    </div>
-                    <div style="flex-basis:100%; display:flex; gap:8px;">
-                        <button type="submit" class="btn btn-success" id="btn-salvar-usuario" style="flex:1;">Cadastrar Usuário</button>
-                        <button type="button" class="btn" id="btn-limpar-cadastro">Limpar</button>
-                    </div>
-                </form>
-            </div>
+            <div class="tabs-container">
+                <div class="tabs">
+                    <div class="tab active" data-tab="usuarios-cadastro">Cadastro</div>
+                    <div class="tab" data-tab="usuarios-mostrar-os">Mostrar OS</div>
+                    <div class="tab" data-tab="usuarios-escalonamento">Lógica de Escalonamento</div>
+                </div>
 
-            <div class="filters" style="display:block; background:#fff; padding:24px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
-                <h3 style="margin:0 0 12px 0">Usuários Cadastrados</h3>
-                <table id="tabela-usuarios" style="width:100%; border-collapse: collapse;">
-                    <thead>
-                        <tr>
-                            <th style="text-align:left; padding:8px;">Nome</th>
-                            <th style="text-align:left; padding:8px;">Usuário</th>
-                            <th style="text-align:left; padding:8px;">E-mail</th>
-                            <th style="text-align:left; padding:8px;">Tipo</th>
-                            <th style="text-align:left; padding:8px;">Primeiro Login</th>
-                            <th style="text-align:left; padding:8px;">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbody-usuarios">
-                        <tr><td colspan="6"><div class="empty-state">Nenhum usuário encontrado</div></td></tr>
-                    </tbody>
-                </table>
+                <div class="tab-content active" id="usuarios-cadastro">
+                    <div class="filters" style="display:block; margin-bottom:16px; background:#fff; padding:24px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+                        <h3 style="margin:0 0 12px 0">Cadastrar Novo Usuário</h3>
+                        <form id="form-cadastro-usuario" class="filters" style="grid-template-columns: repeat(2, minmax(320px, 1fr)); gap:24px; align-items:start;">
+                            <input type="hidden" id="cad-user-id" />
+                            <div class="filter-group" style="flex:1; min-width:320px;">
+                                <label class="filter-label">Nome Completo *</label>
+                                <input type="text" class="filter-input" id="cad-nome-completo" placeholder="Ex.: João da Silva" required>
+                            </div>
+                            <div class="filter-group" style="flex:1; min-width:280px;">
+                                <label class="filter-label">Usuário *</label>
+                                <input type="text" class="filter-input" id="cad-usuario" placeholder="Ex.: joao.silva" required>
+                            </div>
+                            <div class="filter-group" style="flex:1; min-width:320px;">
+                                <label class="filter-label">E-mail *</label>
+                                <input type="email" class="filter-input" id="cad-email" placeholder="email@exemplo.com" required>
+                            </div>
+                            <div class="filter-group" style="flex:1; min-width:280px;">
+                                <label class="filter-label">Tipo de Usuário *</label>
+                                <select class="filter-select" id="cad-tipo-usuario" required>
+                                    <option value="Administrador">Administrador</option>
+                                    <option value="Gestor">Gestor</option>
+                                    <option value="Usuário" selected>Usuário</option>
+                                </select>
+                            </div>
+                            <div style="flex-basis:100%; display:flex; gap:8px;">
+                                <button type="submit" class="btn btn-success" id="btn-salvar-usuario" style="flex:1;">Cadastrar Usuário</button>
+                                <button type="button" class="btn" id="btn-limpar-cadastro">Limpar</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="filters" style="display:block; background:#fff; padding:24px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+                        <h3 style="margin:0 0 12px 0">Usuários Cadastrados</h3>
+                        <table id="tabela-usuarios" style="width:100%; border-collapse: collapse;">
+                            <thead>
+                                <tr>
+                                    <th style="text-align:left; padding:8px;">Nome</th>
+                                    <th style="text-align:left; padding:8px;">Usuário</th>
+                                    <th style="text-align:left; padding:8px;">E-mail</th>
+                                    <th style="text-align:left; padding:8px;">Tipo</th>
+                                    <th style="text-align:left; padding:8px;">Primeiro Login</th>
+                                    <th style="text-align:left; padding:8px;">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-usuarios">
+                                <tr><td colspan="6"><div class="empty-state">Nenhum usuário encontrado</div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="usuarios-mostrar-os">
+                    <div id="usuarios-mostrar-os-content" class="filters" style="display:block; background:#fff; padding:24px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+                        <!-- preenchido via JS -->
+                    </div>
+                </div>
+
+                <div class="tab-content" id="usuarios-escalonamento">
+                    <div id="usuarios-escalonamento-content" class="filters" style="display:block; background:#fff; padding:24px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+                        <!-- preenchido via JS -->
+                    </div>
+                </div>
             </div>
         </div>
     
@@ -3467,6 +3522,12 @@
             } catch (_) { return false; }
         }
 
+        function canUseSupabase() {
+            try {
+                return !!(window.supabase) && navigator.onLine;
+            } catch (_) { return false; }
+        }
+
         /**
          * Interpreta a data de forma robusta, forçando o formato DD/MM/YYYY se houver barras.
          */
@@ -3627,8 +3688,14 @@
             
             const match = observacao.match(/^\[Status:\s*(.*?)\]\s*(.*)/);
             if (match && match[2]) {
-                return match[2];
+                observacao = match[2];
             }
+            // Remove marcas de transferência/retorno
+            try {
+                observacao = String(observacao || '')
+                    .replace(/\(Transferido de .*? para .*?\)\s*/gi, '')
+                    .replace(/\(Retornado para .*? de .*?\)\s*/gi, '');
+            } catch(_) {}
             return observacao;
         }
 
@@ -4047,6 +4114,7 @@
         // NOVO: Verificação automática somente para gestores
         async function verificarEscalonamentosGestoresAuto(force = false) {
             try {
+                if (!canUseSupabase()) return;
                 const { data, error } = await supabase.from(tabelaBase).select('*');
                 if (error) throw error;
                 let alertas = await fetchAlertasConfigSupabase();
@@ -4244,6 +4312,7 @@
 
         function sortTable(tab, column) {
             const currentSort = sortState[tab];
+            if (!currentSort) return;
             
             // Se clicar na mesma coluna, alterna a direção
             if (currentSort.column === column) {
@@ -4273,6 +4342,7 @@
             const data = osData[tab] || [];
             const filteredData = applyFilters(tab, data);
             const currentSort = sortState[tab];
+            if (!currentSort) { await renderTableRows(tab, filteredData); return; }
             
             if (!currentSort.column) {
                 await renderTableRows(tab, filteredData);
@@ -4398,7 +4468,7 @@
                     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(isNaN(n) ? 0 : n);
                 };
                 return `
-                    <tr>
+                    <tr class="os-row">
                         <td>${revendasMap[os.Revenda] || os.Revenda}</td>
                         <td><strong>${os['Numero OS'] || '-'}</strong></td>
                         <td><span class="status-badge ${os['Situacao OS'] === 'Aberta' ? 'status-aberta' : 'status-fechada'}">${os['Situacao OS']}</span></td>
@@ -4415,7 +4485,7 @@
                         <td>${fmt(os['Total OS'])}</td>
                         <td><div class="observacao-text" title="${observacaoReal || ''}">${observacaoReal || ''}</div></td>
                         <td><div class="acao-atualizacao-text" title="${os['Acao / Atualizacao'] || ''}">${os['Acao / Atualizacao'] || ''}</div></td>
-                        <td><span class="escalonamento-badge">${getEscalonamento(tab, diasEmAberto, os.Revenda)}</span></td>
+                        <td><span class="escalonamento-badge">${getEscalonamentoForOS(os)}</span></td>
                         <td><button class="btn btn-primary btn-sm open-individual"
                             data-os-id="${os.Chave || os.Cahve}"
                             data-nro-os="${encodeURIComponent(os['Numero OS'] || '')}"
@@ -4437,12 +4507,25 @@
             }
             
             document.querySelectorAll('.observacao-text, .acao-atualizacao-text').forEach(el => {
-                el.addEventListener('click', e => { e.stopPropagation(); el.classList.toggle('expanded'); });
+                el.addEventListener('click', e => {
+                    e.stopPropagation();
+                    const row = el.closest('tr');
+                    const source = row ? row.querySelector('.open-individual') : null;
+                    if (!source) return;
+                    const nroOs = decodeURIComponent(source.dataset.nroOs || '');
+                    const situacao = decodeURIComponent(source.dataset.situacao || 'Aberta');
+                    const status = decodeURIComponent(source.dataset.status || 'Sem Status');
+                    const observacao = decodeURIComponent(source.dataset.observacao || '');
+                    const acao = decodeURIComponent(source.dataset.acao || '');
+                    const focus = el.classList.contains('observacao-text') ? 'observacao' : 'acao';
+                    openDetailsModal(nroOs, observacao, acao, status, situacao, focus);
+                });
             });
 
             // Liga eventos para abrir modal de atualização sem usar onclick inline
             tbody.querySelectorAll('.open-individual').forEach(el => {
-                el.addEventListener('click', () => {
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
                     const osId = el.dataset.osId;
                     const nroOs = decodeURIComponent(el.dataset.nroOs || '');
                     const situacao = decodeURIComponent(el.dataset.situacao || 'Aberta');
@@ -4454,6 +4537,8 @@
                     openIndividualModal(osId, nroOs, situacao, observacao, acao, status, revenda, tipo);
                 });
             });
+
+            // Removido: abertura por clique na linha inteira; agora só Observação/Ação abrem o modal
 
             // Garante que a visibilidade seja aplicada após a renderização
             setTimeout(applyColumnVisibility, 0);
@@ -4712,36 +4797,17 @@
         }
 
         function transferirEscalonamento(tab) {
-            const select = document.getElementById(`transfer-to-${tab}`);
-            const targetPerson = select.value;
-            const checkboxes = document.querySelectorAll(`.transfer-checkbox-${tab}:checked`);
-            
-            if (checkboxes.length === 0) {
-                alert('Selecione pelo menos uma OS para transferir.');
-                return;
-            }
-
-            const osKeysToTransfer = Array.from(checkboxes).map(cb => cb.value);
-
-            osKeysToTransfer.forEach(key => {
-                let os = findOSByKey(key);
-                if (os) {
-                    const originalEscalonamento = getEscalonamento(tab, calcularDiasEmAberto(os), os.Revenda);
-                    os.Observacao = `(Transferido de ${originalEscalonamento} para ${targetPerson}) ${os.Observacao}`;
-                }
-            });
-
-            saveOSData();
-            // Atualiza as tabelas e a UI
-            populateTransferenciaTables();
-            filterAndDisplayData(tab);
-
-            alert(`${osKeysToTransfer.length} OS(s) transferida(s) para ${targetPerson}.`);
+            alert('Transferência desativada. O escalonamento segue regras padrão sem mover OS.');
         }
 
         function findOSByKey(key) {
+            const k = String(key || '').trim();
             for (const type in osData) {
-                const os = osData[type].find(os => (os.Chave || os.Cahve) === key);
+                const arr = Array.isArray(osData[type]) ? osData[type] : [];
+                const os = arr.find(os => {
+                    const variants = [String(os.Cahve||''), String(os.Chave||os['Chave']||''), String(os['Numero OS']||'')].filter(Boolean);
+                    return variants.includes(k);
+                });
                 if (os) return os;
             }
             return null;
@@ -4888,11 +4954,24 @@
                         return;
                     }
 
+                    // Tabs internas de Cadastrar Usuários
+                    const isUsuariosSubTab = tabId && tabId.startsWith('usuarios-') && this.closest('#cadastro-usuarios');
+                    if (isUsuariosSubTab) {
+                        const container = this.closest('.tabs-container');
+                        const activeTab = container.querySelector('.tab.active');
+                        const activeContent = container.querySelector('.tab-content.active');
+                        if (activeTab) activeTab.classList.remove('active');
+                        if (activeContent) activeContent.classList.remove('active');
+                        this.classList.add('active');
+                        const target = container.querySelector(`#${tabId}`);
+                        if (target) target.classList.add('active');
+                        if (tabId === 'usuarios-mostrar-os') initializeMostrarOSTab();
+                        if (tabId === 'usuarios-escalonamento') renderEscConfigList();
+                        return;
+                    }
+
                     // Tabs principais
-                    const activeGlobalTab = document.querySelector('.tab.active');
-                    const activeGlobalContent = document.querySelector('.tab-content.active');
-                    if (activeGlobalTab) activeGlobalTab.classList.remove('active');
-                    if (activeGlobalContent) activeGlobalContent.classList.remove('active');
+                    document.querySelectorAll('.tab.active, .tab-content.active').forEach(el => el.classList.remove('active'));
                     this.classList.add('active');
                     const targetGlobal = document.getElementById(tabId);
                     if (targetGlobal) targetGlobal.classList.add('active');
@@ -4963,6 +5042,8 @@
             document.getElementById('btn-fechar-os').addEventListener('click', closeSelectedOS);
             document.getElementById('btn-atualizar-status').addEventListener('click', updateSelectedStatus);
             document.getElementById('btn-limpar-selecao').addEventListener('click', clearSelection);
+            const btnLimparTransf = document.getElementById('btn-limpar-transferencias');
+            if (btnLimparTransf) btnLimparTransf.addEventListener('click', limparObservacoesTransferencia);
             document.getElementById('select-all-os').addEventListener('change', toggleSelectAll);
             document.getElementById('btn-buscar-os').addEventListener('click', searchIndividualOS);
             document.getElementById('btn-atualizar-individual').addEventListener('click', updateIndividualOS);
@@ -5497,7 +5578,7 @@
                 created_at: currentSessionLoginAt.toISOString()
             };
             try {
-                if (typeof supabase !== 'undefined') {
+                if (canUseSupabase()) {
                     const { error } = await supabase.from(TABELA_USER_SESSIONS).insert(payload);
                     if (error) throw error;
                 } else {
@@ -5517,7 +5598,7 @@
             const durationSeconds = Math.max(0, Math.round((logout.getTime() - currentSessionLoginAt.getTime()) / 1000));
             const update = { logout_at: logout.toISOString(), duration_seconds: durationSeconds };
             try {
-                if (typeof supabase !== 'undefined') {
+                if (canUseSupabase()) {
                     const { error } = await supabase
                         .from(TABELA_USER_SESSIONS)
                         .update(update)
@@ -8252,6 +8333,20 @@
             showLoading(currentTab);
             hideMessages();
             try {
+                if (!canUseSupabase()) {
+                    const tbody = document.getElementById(`tbody-${currentTab}`);
+                    const countEl = document.getElementById(`count-${currentTab}`);
+                    const local = osData[currentTab] || [];
+                    if (local.length === 0) {
+                        if (tbody) tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; padding: 20px;">Conexão indisponível. Sem dados locais para exibir.</td></tr>`;
+                        if (countEl) countEl.textContent = '0 OS encontradas';
+                        return;
+                    }
+                    await renderTable(currentTab);
+                    updateTotals(currentTab);
+                    applyColumnVisibility();
+                    return;
+                }
                 const tipo = tiposMap[currentTab];
                 if (!tipo) {
                     console.warn(`Aba sem tipo mapeado: "${currentTab}". Ignorando carregamento.`);
@@ -8398,48 +8493,7 @@
             if (!user) return;
             const nome = (user.nome_completo || user.usuario || '').toLowerCase();
             if (nome.includes('antônio gustavo') || nome.includes('antonio gustavo') || nome.includes('thiago carmo') || nome.includes('thiago.carmo')) return;
-
-            // Usa todas as abas e aplica o mesmo critério do escalonamento por usuário
-            const imminents = await computeImminentTransfersForUserAcrossTypes(user);
-            if (!imminents.length) return;
-
-            // Cria container se necessário
-            let container = document.getElementById('toast-container');
-            if (!container) {
-                container = document.createElement('div');
-                container.id = 'toast-container';
-                container.style.position = 'fixed';
-                container.style.top = '10px';
-                container.style.right = '10px';
-                container.style.zIndex = '10010';
-                document.body.appendChild(container);
-            }
-            const toast = document.createElement('div');
-            toast.style.background = '#fff';
-            toast.style.border = '1px solid #ffc107';
-            toast.style.boxShadow = '0 4px 16px rgba(0,0,0,0.2)';
-            toast.style.borderRadius = '8px';
-            toast.style.padding = '12px 16px';
-            toast.style.margin = '8px';
-            toast.style.minWidth = '320px';
-            toast.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <strong>Transferência Pendente</strong>
-                <button aria-label="Fechar" style="background:none; border:none; font-size:18px; cursor:pointer;">&times;</button>
-            </div>
-            <div>Você tem ${imminents.length} OS com transferência em até 5 dias.</div>`;
-
-            const closeBtn = toast.querySelector('button');
-            closeBtn.addEventListener('click', () => toast.remove());
-            toast.addEventListener('click', () => {
-                try {
-                    const numeros = imminents.map(os => os['Numero OS'] || '').filter(Boolean);
-                    mostrarModalListaOS(numeros);
-                } catch(_) {}
-            });
-            container.appendChild(toast);
-            
-            // Marca que a notificação foi exibida nesta sessão
-            sessionStorage.setItem('transferenciaToastShown', 'true');
+            return;
         }
 
         // Toast genérico para feedback de gravação de logs
@@ -8493,6 +8547,51 @@
             body.innerHTML = (numeros && numeros.length)
                 ? numeros.map(n => `<div>${n}</div>`).join('')
                 : '<div>Nenhuma OS encontrada.</div>';
+            modal.style.display = 'flex';
+        }
+
+        function openDetailsModal(nroOs, observacao, acaoAtualizacao, status, situacao, focus = 'both') {
+            let modal = document.getElementById('os-details-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'os-details-modal';
+                modal.className = 'modal';
+                modal.innerHTML = `
+                    <div class="modal-content modal-wide">
+                        <div class="modal-header"><h2 class="modal-title" id="os-details-title">Detalhes da OS</h2><button class="close-modal">&times;</button></div>
+                        <div class="modal-body" style="display:flex; gap:16px; flex-wrap:wrap;">
+                            <div id="os-details-observacao-box" style="flex:1 1 300px;">
+                                <div style="font-weight:600; margin-bottom:6px;">Observação</div>
+                                <div id="os-details-observacao" style="white-space:pre-wrap; max-height:320px; overflow:auto; border:1px solid #eee; padding:10px; border-radius:8px;"></div>
+                            </div>
+                            <div id="os-details-acao-box" style="flex:1 1 300px;">
+                                <div style="font-weight:600; margin-bottom:6px;">Ação/Atualização</div>
+                                <div id="os-details-acao" style="white-space:pre-wrap; max-height:320px; overflow:auto; border:1px solid #eee; padding:10px; border-radius:8px;"></div>
+                            </div>
+                        </div>
+                        <div class="modal-footer"><button type="button" class="btn close-modal">Fechar</button></div>
+                    </div>`;
+                document.body.appendChild(modal);
+                modal.querySelectorAll('.close-modal').forEach(btn => btn.addEventListener('click', () => { const m = document.getElementById('os-details-modal'); if (m) m.style.display = 'none'; }));
+            }
+            const titleEl = modal.querySelector('#os-details-title');
+            const obsEl = modal.querySelector('#os-details-observacao');
+            const acaoEl = modal.querySelector('#os-details-acao');
+            const obsBox = modal.querySelector('#os-details-observacao-box');
+            const acaoBox = modal.querySelector('#os-details-acao-box');
+            if (titleEl) titleEl.textContent = `OS ${nroOs} — ${situacao} — ${status}`;
+            if (obsEl) obsEl.textContent = observacao || '';
+            if (acaoEl) acaoEl.textContent = acaoAtualizacao || '';
+            if (focus === 'observacao') {
+                if (obsBox) obsBox.style.display = 'block';
+                if (acaoBox) acaoBox.style.display = 'none';
+            } else if (focus === 'acao') {
+                if (obsBox) obsBox.style.display = 'none';
+                if (acaoBox) acaoBox.style.display = 'block';
+            } else {
+                if (obsBox) obsBox.style.display = 'block';
+                if (acaoBox) acaoBox.style.display = 'block';
+            }
             modal.style.display = 'flex';
         }
 
@@ -8896,6 +8995,34 @@
             }
         }
 
+        async function limparObservacoesTransferencia() {
+            const user = getCurrentUserInfo();
+            if (!user || !user.is_admin) { alert('Apenas administrador pode executar.'); return; }
+            try {
+                const { data, error } = await supabase
+                    .from(tabelaBase)
+                    .select('Chave, Observacao')
+                    .or('Observacao.ilike.%Transferido%,Observacao.ilike.%Retornado%')
+                    .limit(10000);
+                if (error) throw error;
+                let updated = 0;
+                for (const row of (data || [])) {
+                    const obs = String(row.Observacao || '');
+                    const status = extrairStatusDaObservacao(obs);
+                    const body = extrairObservacaoSemStatus(obs);
+                    const cleaned = combinarStatusEObservacao(status, body);
+                    if (cleaned !== obs) {
+                        const { error: e2 } = await supabase.from(tabelaBase).update({ Observacao: cleaned }).eq('Chave', row.Chave);
+                        if (!e2) updated++;
+                    }
+                }
+                alert(`Limpeza concluída. Registros atualizados: ${updated}.`);
+                try { await loadOSData(); } catch(_) {}
+            } catch (e) {
+                alert('Erro ao limpar: ' + (e?.message || e));
+            }
+        }
+
         async function updateIndividualOS() {
             const formEl = document.getElementById('individual-os-form');
             const osId = formEl ? formEl.dataset.osId : '';
@@ -9003,7 +9130,16 @@
 
             // Perfil: restringe dados para usuário padrão ao seu escalonamento
             const currentUser = window.NormaQCurrentUser || (JSON.parse(localStorage.getItem('authUser')) || null);
-            const restrictByUser = !!(currentUser && !(currentUser.is_admin || currentUser.tipo_usuario === 'Administrador') && currentUser.tipo_usuario !== 'Gestor');
+            function userHasAnyViewPermForTab(user, tabKey){
+                try {
+                    const map = JSON.parse(localStorage.getItem('viewPermMap')||'{}');
+                    const v = normalizeNomeResponsavel((user?.nome_completo || user?.usuario || ''));
+                    const owners = Object.keys(map[v]||{});
+                    return owners.some(u => !!(((map[v]||{})[u]||{})[String(tabKey).toLowerCase()]));
+                } catch(_){ return false; }
+            }
+            const hasPerm = currentUser ? userHasAnyViewPermForTab(currentUser, tab) : false;
+            const restrictByUser = !!(currentUser && !(currentUser.is_admin || currentUser.tipo_usuario === 'Administrador') && currentUser.tipo_usuario !== 'Gestor' && !hasPerm);
             const normalize = (str) => (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
             const getUserEscLabel = (nomeCompleto) => {
                 const parts = (nomeCompleto || '').trim().split(/\s+/);
@@ -9018,13 +9154,6 @@
             const userEscNorm = restrictByUser ? normalize(getUserEscLabel(currentUser?.nome_completo || '')) : '';
 
             return data.filter(os => {
-                const cu = window.NormaQCurrentUser || (JSON.parse(localStorage.getItem('authUser')) || null);
-                const isBruna = cu && ((cu.usuario || '').toLowerCase().includes('bruna') || (cu.nome_completo || '').toLowerCase().includes('bruna'));
-                if (isBruna) {
-                    if (tab === 'externa') return false;
-                    const osRev = String(os.Revenda || '');
-                    if (tab === 'interna' && osRev === '3') return false;
-                }
                 // Filtro de revenda (múltipla seleção) - CORREÇÃO MELHORADA
                 if (selectedRevendas.length > 0) {
                     // Converte ambos os valores para string para garantir compatibilidade
@@ -9037,7 +9166,10 @@
                 }
                 
                 if (nroOs && (os['Numero OS'] || '').toString().toLowerCase() !== nroOs.toLowerCase()) return false;
-                if (situacao && os['Situacao OS'] !== situacao) return false;
+                if (situacao) {
+                    const sitRaw = String(os['Situacao OS'] || '');
+                    if (sitRaw.toLowerCase() !== String(situacao).toLowerCase()) return false;
+                }
                 
                 // Filtro de status usando a extração da observação
                 const status = extrairStatusDaObservacao(os.Observacao);
@@ -9055,7 +9187,7 @@
                         if (diasEmAberto < min || diasEmAberto > max) return false;
                     }
                 }
-                const escCalc = getEscalonamento(tab, diasEmAberto, os.Revenda);
+                const escCalc = getEscalonamentoForOS(os);
                 if (escalonamento) {
                     const tipoCalc = os.Tipo?.toLowerCase() || tab;
                     const revCode = getRevendaCode(String(os.Revenda)) || String(os.Revenda);
@@ -9173,10 +9305,142 @@
             }
         }
 
+        function getEscalonamentoChain(tipo, revenda) {
+            const r = String(revenda || '').toString();
+            const is3 = r === '3';
+            const is1 = r === '1';
+            const is2 = r === '2';
+            const is4 = r === '4';
+            const t = (String(tipo || '').toLowerCase());
+            if (t === 'garantia') {
+                if (is3) return ['Giovana', 'Wanderley', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+                if (is1 || is4) return ['Flávia', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+                if (is2) return ['Giovana', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+                return ['Giovana', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+            }
+            if (t === 'interna') {
+                if (is3) return ['Ana Leya', 'Wanderley', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+                if (is1 || is2 || is4) return ['Bruna', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+                return ['Bruna', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+            }
+            // externa
+            if (is3) return ['Ana Leya', 'Wanderley', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+            if (is1 || is2 || is4) return ['Isabelle', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+            return ['Isabelle', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+        }
+
+        function normalizeNomeResponsavel(s) {
+            return String(s || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        }
+
+        function getAllowedPrevious(escalonamentoAtual, tipo, revenda, dias) {
+            const chain = getEscalonamentoChain(tipo, revenda);
+            const normChain = chain.map(normalizeNomeResponsavel);
+            const idx = normChain.indexOf(normalizeNomeResponsavel(escalonamentoAtual));
+            if (idx <= 0) return null;
+            return chain[idx - 1];
+        }
+
+        function getPrevEscalonamentoByDias(tipo, dias, revenda) {
+            try {
+                let prevDias = Number.isFinite(dias) ? Math.max(0, Math.floor(dias) - 1) : 0;
+                return getEscalonamento(tipo, prevDias, revenda);
+            } catch(_) { return null; }
+        }
+
+        function getFaixasOptions(tipo) {
+            const t = String(tipo || '').toLowerCase();
+            if (t === 'garantia') return ['0-25','26-35','36-50','51-90','90+'];
+            return ['0-10','11-15','16-20','21-30','30+'];
+        }
+
+        function getFaixaLabel(tipo, dias) {
+            const d = Number.isFinite(dias) ? Math.max(0, Math.floor(dias)) : 0;
+            const t = String(tipo || '').toLowerCase();
+            if (t === 'garantia') {
+                if (d <= 25) return '0-25';
+                if (d <= 35) return '26-35';
+                if (d <= 50) return '36-50';
+                if (d <= 90) return '51-90';
+                return '90+';
+            }
+            if (d <= 10) return '0-10';
+            if (d <= 15) return '11-15';
+            if (d <= 20) return '16-20';
+            if (d <= 30) return '21-30';
+            return '30+';
+        }
+
+        function getOSKey(o) {
+            try {
+                const k = String(o.Cahve || o.Chave || o['Chave'] || o['Numero OS'] || '').trim();
+                return k;
+            } catch(_) { return ''; }
+        }
+
+        function getEscOverride(tipo, dias, revenda) {
+            try {
+                const faixa = getFaixaLabel(tipo, dias);
+                const map = JSON.parse(localStorage.getItem('escalonamentoCustomMap') || '{}');
+                const key = `${String(tipo||'').toLowerCase()}|${String(revenda||'')}|${faixa}`;
+                return map[key] || null;
+            } catch(_) { return null; }
+        }
+
+        function setEscalonamentoOverride(tipo, revenda, faixa, usuario) {
+            try {
+                const map = JSON.parse(localStorage.getItem('escalonamentoCustomMap') || '{}');
+                const key = `${String(tipo||'').toLowerCase()}|${String(revenda||'')}|${String(faixa||'')}`;
+                map[key] = usuario;
+                localStorage.setItem('escalonamentoCustomMap', JSON.stringify(map));
+            } catch(_) {}
+        }
+
+        function getEscalonamentoDefault(tab, dias, revenda) {
+            if (!Number.isFinite(dias) || dias < 0) dias = 0;
+            const revendaNum = revenda ? revenda.toString() : '';
+            if (tab === 'garantia') {
+                if (dias <= 25) {
+                    if (['1', '4'].includes(revendaNum)) return 'Flávia';
+                    if (['2', '3'].includes(revendaNum)) return 'Giovana';
+                }
+                if (dias <= 50) {
+                    if (revendaNum === '3') {
+                        if (dias <= 35) return 'Wanderley';
+                        return 'Graziela';
+                    }
+                    return 'Graziela';
+                }
+                if (dias <= 90) return 'Johnny';
+                return 'Antônio Gustavo';
+            }
+            if (dias <= 10) {
+                if (tab === 'externa') {
+                    if (['1', '2', '4'].includes(revendaNum)) return 'Isabelle';
+                    if (revendaNum === '3') return 'Ana Leya';
+                    return 'Isabelle';
+                }
+                if (tab === 'interna') {
+                    if (revendaNum === '3') return 'Ana Leya';
+                    if (['1', '2', '4'].includes(revendaNum)) return 'Bruna';
+                    return 'Bruna';
+                }
+            }
+            if (dias <= 15) {
+                if (revendaNum === '3') return 'Wanderley';
+                return 'Graziela';
+            }
+            if (dias <= 20) return 'Graziela';
+            if (dias <= 30) return 'Johnny';
+            return 'Antônio Gustavo';
+        }
+
 function getEscalonamento(tab, dias, revenda) {
             // Normaliza valores
             if (!Number.isFinite(dias) || dias < 0) dias = 0;
             const revendaNum = revenda ? revenda.toString() : '';
+            const ov = getEscOverride(tab, dias, revendaNum);
+            if (ov) return ov;
 
             // Garantia: regra acordada
             if (tab === 'garantia') {
@@ -9184,50 +9448,7 @@ function getEscalonamento(tab, dias, revenda) {
                 if (dias <= 25) {
                     if (['1', '4'].includes(revendaNum)) return 'Flávia';
                     if (['2', '3'].includes(revendaNum)) return 'Giovana';
-}
-
-function getEscalonamentoChain(tipo, revenda) {
-    const r = String(revenda || '').toString();
-    const is3 = r === '3';
-    const is1 = r === '1';
-    const is2 = r === '2';
-    const is4 = r === '4';
-    const t = (String(tipo || '').toLowerCase());
-    if (t === 'garantia') {
-        if (is3) return ['Giovana', 'Wanderley', 'Graziela', 'Johnny', 'Antônio Gustavo'];
-        if (is1 || is4) return ['Flávia', 'Graziela', 'Johnny', 'Antônio Gustavo'];
-        if (is2) return ['Giovana', 'Graziela', 'Johnny', 'Antônio Gustavo'];
-        return ['Giovana', 'Graziela', 'Johnny', 'Antônio Gustavo'];
-    }
-    if (t === 'interna') {
-        if (is3) return ['Ana Leya', 'Wanderley', 'Graziela', 'Johnny', 'Antônio Gustavo'];
-        if (is1 || is2 || is4) return ['Bruna', 'Graziela', 'Johnny', 'Antônio Gustavo'];
-        return ['Bruna', 'Graziela', 'Johnny', 'Antônio Gustavo'];
-    }
-    // externa
-    if (is3) return ['Ana Leya', 'Wanderley', 'Graziela', 'Johnny', 'Antônio Gustavo'];
-    if (is1 || is2 || is4) return ['Isabelle', 'Graziela', 'Johnny', 'Antônio Gustavo'];
-    return ['Isabelle', 'Graziela', 'Johnny', 'Antônio Gustavo'];
-}
-
-function normalizeNomeResponsavel(s) {
-    return String(s || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-}
-
-function getAllowedPrevious(escalonamentoAtual, tipo, revenda, dias) {
-    const chain = getEscalonamentoChain(tipo, revenda);
-    const normChain = chain.map(normalizeNomeResponsavel);
-    const idx = normChain.indexOf(normalizeNomeResponsavel(escalonamentoAtual));
-    if (idx <= 0) return null;
-    return chain[idx - 1];
-}
-
-function getPrevEscalonamentoByDias(tipo, dias, revenda) {
-    try {
-        let prevDias = Number.isFinite(dias) ? Math.max(0, Math.floor(dias) - 1) : 0;
-        return getEscalonamento(tipo, prevDias, revenda);
-    } catch(_) { return null; }
-}
+                }
                 // 26–50 dias
                 if (dias <= 50) {
                     if (revendaNum === '3') {
@@ -9271,7 +9492,716 @@ function getPrevEscalonamentoByDias(tipo, dias, revenda) {
             // 30+ dias: passa para Antônio Gustavo
             return 'Antônio Gustavo';
         }
+        function getEscalonamentoForOS(os) {
+            try {
+                const t = String(os.Tipo || '').toLowerCase() || 'externa';
+                const dias = calcularDiasEmAberto(os);
+                const rev = os.Revenda;
+                return getEscalonamento(t, dias, rev);
+            } catch(_) {
+                return getEscalonamento(String(os.Tipo||'').toLowerCase()||'externa', calcularDiasEmAberto(os), os.Revenda);
+            }
+        }
         
+        async function initializeMostrarOSTab() {
+            try {
+                const content = document.getElementById('usuarios-mostrar-os-content');
+                if (!content) return;
+                await ensureTransferDataLoaded();
+                const externa = Array.isArray(osData.externa) ? osData.externa : [];
+                const interna = Array.isArray(osData.interna) ? osData.interna : [];
+                const garantia = Array.isArray(osData.garantia) ? osData.garantia : [];
+                const all = [...externa, ...interna, ...garantia];
+                const users = ['Isabelle','Ana Leya','Bruna','Wanderley','Graziela','Johnny','Antônio Gustavo','Giovana','Flávia','Thiago Carmo'];
+                const tiposSelBase = ['externa','interna','garantia'];
+                const revsSelBase = ['1','2','3','4'];
+                const rows = all.map(os => {
+                    const tipo = os.Tipo || '-';
+                    const rev = revendasMap[String(os.Revenda)] || os.Revenda || '-';
+                    const nro = os['Numero OS'] || '-';
+                    const sit = os['Situacao OS'] || '-';
+                    const dias = calcularDiasEmAberto(os);
+                    const esc = getEscalonamento((os.Tipo || '').toLowerCase() || 'externa', dias, os.Revenda);
+                    const emi = formatDate(os.Emissao);
+                    return `<tr><td>${tipo}</td><td>${rev}</td><td>${nro}</td><td>${sit}</td><td>${emi}</td><td>${dias}</td><td>${esc}</td></tr>`;
+                }).join('');
+                const overrides = (()=>{ try { return JSON.parse(localStorage.getItem('escalonamentoCustomMap')||'{}'); } catch(_) { return {}; } })();
+                const routed = all.filter(os => {
+                    const tipo = ((os.Tipo || '').toLowerCase() || 'externa');
+                    const dias = calcularDiasEmAberto(os);
+                    const rev = os.Revenda;
+                    const sit = String(os['Situacao OS']||'').toLowerCase();
+                    if (!sit.includes('abert')) return false;
+                    const faixa = getFaixaLabel(tipo, dias);
+                    const key = `${String(tipo)}|${String(rev||'')}|${String(faixa)}`;
+                    const sub = overrides[key];
+                    if (!sub) return false;
+                    const cur = getEscalonamento(tipo, dias, rev);
+                    const def = getEscalonamentoDefault(tipo, dias, rev);
+                    return sub && normalizeNomeResponsavel(cur)===normalizeNomeResponsavel(sub) && normalizeNomeResponsavel(def)!==normalizeNomeResponsavel(sub);
+                });
+                const routedRows = routed.map(os => {
+                    const tipo = os.Tipo || '-';
+                    const rev = revendasMap[String(os.Revenda)] || os.Revenda || '-';
+                    const nro = os['Numero OS'] || '-';
+                    const sit = os['Situacao OS'] || '-';
+                    const emi = formatDate(os.Emissao);
+                    const dias = calcularDiasEmAberto(os);
+                    const atual = getEscalonamento((os.Tipo || '').toLowerCase() || 'externa', dias, os.Revenda);
+                    const padrao = getEscalonamentoDefault((os.Tipo || '').toLowerCase() || 'externa', dias, os.Revenda);
+                    const sitClass = sit === 'Aberta' ? 'status-aberta' : 'status-fechada';
+                    return `<tr><td>${tipo}</td><td>${rev}</td><td>${nro}</td><td><span class="status-badge ${sitClass}">${sit}</span></td><td>${emi}</td><td>${dias}</td><td>${atual}</td><td>${padrao}</td></tr>`;
+                }).join('');
+                const ctrl = `
+                    <div style="margin-bottom:12px; padding:12px; border:1px solid #eee; border-radius:8px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                        <div id="view-perm-status" style="font-weight:600; margin-left:8px;"></div>
+                        <div id="view-perm-actions" style="margin-left:8px;"></div>
+                        <div id="perm-panel" class="perm-panel">
+                            <label class="perm-title">Permissões de visualização</label>
+                            <div>
+                                <label style="font-weight:600; font-size:12px;">Usuário</label>
+                                <select id="perm-owner" class="filter-select" style="min-width:160px;">
+                                    ${users.map(u=>`<option value="${u}">${u}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-weight:600; font-size:12px;">Tipo</label>
+                                <select id="perm-tipo" class="filter-select" style="min-width:160px;">
+                                    <option value="todos" selected>Todos</option>
+                                    <option value="externa">Externa</option>
+                                    <option value="interna">Interna</option>
+                                    <option value="garantia">Garantia</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-weight:600; font-size:12px;">Permitir</label>
+                                <select id="perm-allow" class="filter-select" style="min-width:120px;">
+                                    <option value="sim" selected>Sim</option>
+                                    <option value="nao">Não</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-weight:600; font-size:12px;">Para quem</label>
+                                <select id="perm-viewer" class="filter-select" style="min-width:160px;">
+                                    ${users.map(u=>`<option value="${u}">${u}</option>`).join('')}
+                                </select>
+                            </div>
+                            <button class="btn btn-primary" id="btn-perm-aplicar">Aplicar permissão</button>
+                        </div>
+                    </div>`;
+                content.innerHTML = `
+                    <h3 style="margin:0 0 12px 0">Permissões de visualização</h3>
+                    ${ctrl}
+                    <div id="perm-summary" style="margin-top:8px; font-weight:600;"></div>
+                    <div id="perm-results" style="margin-top:12px;">
+                        <div class="table-container">
+                            <table style="width:100%">
+                                <thead>
+                                    <tr><th>Revenda</th><th>Nro. OS</th><th>Situação OS</th><th>Tipo</th><th>Data Abertura</th><th>Dias</th><th>Escalonamento</th><th>Consultor</th></tr>
+                                </thead>
+                                <tbody id="perm-results-tbody"><tr><td colspan="8" style="text-align:center; padding:12px;">Nenhuma OS para exibir</td></tr></tbody>
+                            </table>
+                        </div>
+                        <div id="perm-results-count" class="table-row-count"></div>
+                    </div>
+                `;
+                const getSel = (cls)=>Array.from(content.querySelectorAll(cls));
+                const getTiposSel = ()=>getSel('.mostrar-os-tipo').filter(i=>i.checked).map(i=>i.value);
+                const getRevsSel = ()=>getSel('.mostrar-os-rev').filter(i=>i.checked).map(i=>i.value);
+                const getSitSel = ()=>{ const el = content.querySelector('#mostrar-os-situacao'); return el ? el.value : 'Aberta'; };
+                const getCritSel = ()=>{ const el = content.querySelector('#mostrar-os-criterio'); return el ? el.value : 'ambos'; };
+                const ADMINS = ['Thiago Carmo'];
+                function loadViewPermMap(){ try { return JSON.parse(localStorage.getItem('viewPermMap')||'{}'); } catch(_) { return {}; } }
+                function saveViewPermMap(map){ try { localStorage.setItem('viewPermMap', JSON.stringify(map)); } catch(_) {} }
+                function canViewUserForTipo(viewer,user,tipo){
+                    const v = normalizeNomeResponsavel(viewer||'');
+                    const u = normalizeNomeResponsavel(user||'');
+                    if (!v || !u) return false;
+                    if (v===u) return true;
+                    const map = loadViewPermMap();
+                    const perms = (((map[v]||{})[u])||{});
+                    return !!perms[String(tipo).toLowerCase()];
+                }
+                function grantPermForTipo(viewer,user,tipo){
+                    const v = normalizeNomeResponsavel(viewer||'');
+                    const u = normalizeNomeResponsavel(user||'');
+                    let map = loadViewPermMap();
+                    map[v] = map[v] || {};
+                    map[v][u] = map[v][u] || {};
+                    if (tipo==='todos') ['externa','interna','garantia'].forEach(t=>{ map[v][u][t] = true; });
+                    else map[v][u][String(tipo).toLowerCase()] = true;
+                    saveViewPermMap(map);
+                }
+                function revokePermForTipo(viewer,user,tipo){
+                    const v = normalizeNomeResponsavel(viewer||'');
+                    const u = normalizeNomeResponsavel(user||'');
+                    let map = loadViewPermMap();
+                    if ((map[v]||{})[u]) {
+                        if (tipo==='todos') ['externa','interna','garantia'].forEach(t=>{ if (map[v][u][t]) delete map[v][u][t]; });
+                        else {
+                            const key = String(tipo).toLowerCase();
+                            if (map[v][u][key]) delete map[v][u][key];
+                        }
+                        saveViewPermMap(map);
+                    }
+                }
+                function updatePermStatusUI(){
+                    const viewer = content.querySelector('#perm-viewer')?.value || '';
+                    const userOut = content.querySelector('#perm-owner')?.value || '';
+                    const statusEl = content.querySelector('#view-perm-status');
+                    const actionsEl = content.querySelector('#view-perm-actions');
+                    if (!statusEl || !actionsEl) return;
+                    const tiposPermitidos = ['externa','interna','garantia'].filter(t=>canViewUserForTipo(viewer,userOut,t));
+                    const chips = tiposPermitidos.length ? tiposPermitidos.map(t=>`<span class="chip chip-${t}">${t}</span>`).join(' ') : '<span class="chip chip-none">nenhuma</span>';
+                    statusEl.innerHTML = userOut ? `Permissões: <span class="perm-badges">${chips}</span>` : '';
+                    const isAdmin = ADMINS.includes(viewer);
+                    actionsEl.innerHTML = isAdmin && userOut ? `
+                        <button class="btn" id="btn-view-perm-grant">Conceder permissão</button>
+                        <button class="btn" id="btn-view-perm-revoke">Revogar permissão</button>
+                    ` : '';
+                    const sum = content.querySelector('#perm-summary');
+                    if (sum) sum.innerHTML = userOut && viewer ? `Visualizador <strong>${viewer}</strong> pode ver <strong>${userOut}</strong> em: ${chips}` : '';
+                }
+                async function ensureTipoData(tipoKey){
+                    const map = { externa: 'Externa', interna: 'Interna', garantia: 'Garantia' };
+                    const label = map[tipoKey];
+                    let data = osData[tipoKey] || [];
+                    if (Array.isArray(data) && data.length) return data;
+                    try {
+                        if (typeof supabase !== 'undefined' && tabelaBase && label) {
+                            const { data: fetched } = await supabase.from(tabelaBase).select('*').eq('Tipo', label);
+                            osData[tipoKey] = fetched || [];
+                            return osData[tipoKey];
+                        }
+                    } catch(_){ }
+                    return data;
+                }
+                async function renderPermResults(){
+                    const viewer = content.querySelector('#perm-viewer')?.value || '';
+                    const owner = content.querySelector('#perm-owner')?.value || '';
+                    const tipoSel = content.querySelector('#perm-tipo')?.value || 'todos';
+                    const tbody = content.querySelector('#perm-results-tbody');
+                    const countEl = content.querySelector('#perm-results-count');
+                    if (!tbody || !countEl) return;
+                    if (!viewer || !owner) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:12px;">Selecione Usuário e Para quem</td></tr>'; countEl.textContent = '0'; return; }
+                    const tipos = tipoSel==='todos' ? ['externa','interna','garantia'] : [tipoSel];
+                    const allowed = tipos.filter(t=>canViewUserForTipo(viewer, owner, t));
+                    if (!allowed.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:12px;">Sem permissão para exibir</td></tr>'; countEl.textContent = '0'; return; }
+                    let rows = [];
+                    for (const t of allowed) {
+                        const data = await ensureTipoData(t);
+                        (data||[]).forEach(o=>{
+                            const dias = calcularDiasEmAberto(o);
+                            const esc = getEscalonamento(t, dias, o.Revenda);
+                            if (normalizeNomeResponsavel(esc)===normalizeNomeResponsavel(owner)) {
+                                const sit = o['Situacao OS'] || '-';
+                                const sitClass = sit === 'Aberta' ? 'status-aberta' : 'status-fechada';
+                                rows.push(`<tr><td>${revendasMap[o.Revenda]||o.Revenda}</td><td><strong>${o['Numero OS']||'-'}</strong></td><td><span class="status-badge ${sitClass}">${sit}</span></td><td>${o.Tipo||'-'}</td><td>${formatDate(o.Emissao)}</td><td>${dias}</td><td>${esc}</td><td>${o.Consultor||''}</td></tr>`);
+                            }
+                        });
+                    }
+                    tbody.innerHTML = rows.join('') || '<tr><td colspan="8" style="text-align:center; padding:12px;">Nenhuma OS para exibir</td></tr>';
+                    countEl.textContent = `Total: ${rows.length}`;
+                }
+                function grantViewPerm(){
+                    const viewerSel = content.querySelector('#perm-viewer')?.value || '';
+                    const owner = content.querySelector('#perm-owner')?.value || '';
+                    const tipo = content.querySelector('#perm-tipo')?.value || 'todos';
+                    grantPermForTipo(viewerSel, owner, tipo);
+                    updatePermStatusUI();
+                }
+                function revokeViewPerm(){
+                    const viewerSel = content.querySelector('#perm-viewer')?.value || '';
+                    const owner = content.querySelector('#perm-owner')?.value || '';
+                    const tipo = content.querySelector('#perm-tipo')?.value || 'todos';
+                    revokePermForTipo(viewerSel, owner, tipo);
+                    updatePermStatusUI();
+                }
+                
+                function midDias(label){
+                    if(label==='0-10') return 5;
+                    if(label==='11-15') return 13;
+                    if(label==='16-20') return 18;
+                    if(label==='21-30') return 25;
+                    if(label==='30+') return 31;
+                    if(label==='0-25') return 12;
+                    if(label==='26-35') return 30;
+                    if(label==='36-50') return 45;
+                    if(label==='51-90') return 75;
+                    if(label==='90+') return 91;
+                    return 10;
+                }
+                function renderRoutedList(){
+                    const overrides = (()=>{ try { return JSON.parse(localStorage.getItem('escalonamentoCustomMap')||'{}'); } catch(_) { return {}; } })();
+                    const userOut = content.querySelector('#mostrar-os-user-out').value;
+                    const viewer = content.querySelector('#mostrar-os-viewer')?.value || '';
+                    if (!userOut) { const tbody = content.querySelector('#routed-tbody'); const countEl = content.querySelector('#routed-count'); if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:12px;">Nenhuma OS roteada</td></tr>'; if (countEl) countEl.textContent = 'Total: 0'; return; }
+                    let tiposSel = getTiposSel();
+                    tiposSel = tiposSel.filter(t=>canViewUserForTipo(viewer,userOut,t));
+                    const revsSel = getRevsSel();
+                    const sitSel = getSitSel();
+                    const datasets = [];
+                    if (tiposSel.includes('externa')) datasets.push((osData.externa||[]).map(o=>({o,t:'externa'})));
+                    if (tiposSel.includes('interna')) datasets.push((osData.interna||[]).map(o=>({o,t:'interna'})));
+                    if (tiposSel.includes('garantia')) datasets.push((osData.garantia||[]).map(o=>({o,t:'garantia'})));
+                    const flat = datasets.flat();
+                    const items = [];
+                    flat.forEach(({o,t})=>{
+                        const sitRaw = String(o['Situacao OS']||'');
+                        if (sitSel && sitSel!=='Todos' && sitRaw!==sitSel) return;
+                        const rev = String(o.Revenda||'');
+                        if (revsSel.length && !revsSel.includes(rev)) return;
+                        const dias = calcularDiasEmAberto(o);
+                        const faixa = getFaixaLabel(t, dias);
+                        const key = `${String(t)}|${String(rev)}|${String(faixa)}`;
+                        const sub = overrides[key];
+                        const def = getEscalonamentoDefault(t, dias, rev);
+                        const cur = getEscalonamento(t, dias, rev);
+                        if (sub && normalizeNomeResponsavel(def)===normalizeNomeResponsavel(userOut) && normalizeNomeResponsavel(cur)===normalizeNomeResponsavel(sub) && normalizeNomeResponsavel(def)!==normalizeNomeResponsavel(sub)) {
+                            items.push({o,t,atual: sub, padrao: def});
+                            return;
+                        }
+                        const info = parseTransferInfo(o.Observacao||'');
+                        if (info && normalizeNomeResponsavel(info.from)===normalizeNomeResponsavel(userOut) && normalizeNomeResponsavel(info.from)!==normalizeNomeResponsavel(info.to)) {
+                            items.push({o,t,atual: info.to, padrao: def});
+                            return;
+                        }
+                    });
+                    const rows = items.map(({o,t,atual,padrao})=>{
+                        const tipo = o.Tipo || '-';
+                        const rev = revendasMap[String(o.Revenda)] || o.Revenda || '-';
+                        const nro = o['Numero OS'] || '-';
+                        const sit = o['Situacao OS'] || '-';
+                        const emi = formatDate(o.Emissao);
+                        const dias = calcularDiasEmAberto(o);
+                        const sitClass = sit === 'Aberta' ? 'status-aberta' : 'status-fechada';
+                        return `<tr><td>${tipo}</td><td>${rev}</td><td>${nro}</td><td><span class="status-badge ${sitClass}">${sit}</span></td><td>${emi}</td><td>${dias}</td><td>${atual}</td><td>${padrao}</td></tr>`;
+                    }).join('');
+                    const tbody = content.querySelector('#routed-tbody');
+                    const countEl = content.querySelector('#routed-count');
+                    if (tbody) tbody.innerHTML = rows || '<tr><td colspan="8" style="text-align:center; padding:12px;">Nenhuma OS roteada</td></tr>';
+                    if (countEl) countEl.textContent = `Total: ${items.length}`;
+                }
+                function computeAtendidos(user){
+                    if (!user) return { tipos: [], revs: [] };
+                    const tipos = [];
+                    const revs = new Set();
+                    ['externa','interna','garantia'].forEach(t=>{
+                        const faixas = getFaixasOptions(t);
+                        let atendeTipo = false;
+                        ['1','2','3','4'].forEach(r=>{
+                            const hit = faixas.some(f=>normalizeNomeResponsavel(getEscalonamentoDefault(t, midDias(f), r))===normalizeNomeResponsavel(user));
+                            if (hit) {
+                                atendeTipo = true;
+                                revs.add(r);
+                            }
+                        });
+                        if (atendeTipo) tipos.push(t);
+                    });
+                    return { tipos, revs: Array.from(revs) };
+                }
+                function setCheckboxesByAtendidos(at){
+                    try {
+                        Array.from(content.querySelectorAll('.mostrar-os-tipo')).forEach(i=>{ i.checked = at.tipos.includes(i.value); });
+                        Array.from(content.querySelectorAll('.mostrar-os-rev')).forEach(i=>{ i.checked = at.revs.includes(i.value); });
+                    } catch(_) {}
+                }
+                function populateUsuarioOS(){
+                    const userOut = content.querySelector('#mostrar-os-user-out').value;
+                    const viewer = content.querySelector('#mostrar-os-viewer')?.value || '';
+                    try { window.mostrarOSSelected = new Set(); } catch(_) {}
+                    const at = computeAtendidos(userOut);
+                    let tiposSel = getTiposSel();
+                    tiposSel = tiposSel.filter(t=>canViewUserForTipo(viewer,userOut,t));
+                    const revsSel = getRevsSel();
+                    const sitSel2 = getSitSel();
+                    const critSel = getCritSel();
+                    const datasets = [];
+                    if (tiposSel.includes('externa')) datasets.push((osData.externa||[]).map(o=>({o,t:'externa'})));
+                    if (tiposSel.includes('interna')) datasets.push((osData.interna||[]).map(o=>({o,t:'interna'})));
+                    if (tiposSel.includes('garantia')) datasets.push((osData.garantia||[]).map(o=>({o,t:'garantia'})));
+                    const flat = datasets.flat();
+                    let consCount = 0;
+                    let escCount = 0;
+                    let consCountExterna = 0, consCountInterna = 0, escCountExterna = 0, escCountInterna = 0;
+                    const filtered = flat.filter(({o,t})=>{
+                        const sitRaw = String(o['Situacao OS']||'');
+                        if (sitSel2 && sitSel2!=='Todos' && sitRaw!==sitSel2) return false;
+                        const rev = String(o.Revenda||'');
+                        if (revsSel.length && !revsSel.includes(rev)) return false;
+                        const dias = calcularDiasEmAberto(o);
+                        const esc = getEscalonamento(t,dias,o.Revenda);
+                        const consNorm = normalizeNomeResponsavel(o.Consultor||'');
+                        const userNorm = normalizeNomeResponsavel(userOut);
+                        const consMatch = consNorm.includes(userNorm);
+                        const escMatch = normalizeNomeResponsavel(esc)===userNorm;
+                        const histMatch = normalizeNomeResponsavel((historicoEscalonamento||{})[o.Cahve]||'')===userNorm;
+                        const defFirstMatch = normalizeNomeResponsavel(getEscalonamentoDefault(t, t==='garantia'?12:5, o.Revenda))===userNorm;
+                        const transferInfo = parseTransferInfo(o.Observacao||'') || null;
+                        const transferMatch = transferInfo ? normalizeNomeResponsavel(transferInfo.from||'')===userNorm : false;
+                        let match = false;
+                        if (critSel==='consultor') match = consMatch;
+                        else if (critSel==='escalonamento') match = escMatch || histMatch || defFirstMatch || transferMatch;
+                        else match = consMatch || escMatch || histMatch || defFirstMatch || transferMatch;
+                        if (match) {
+                            if (consMatch) consCount++;
+                            if (escMatch) escCount++;
+                            if (consMatch) { if (t==='externa') consCountExterna++; else if (t==='interna') consCountInterna++; }
+                            if (escMatch) { if (t==='externa') escCountExterna++; else if (t==='interna') escCountInterna++; }
+                            return true;
+                        }
+                        return false;
+                    });
+                    const rows = filtered.map(({o,t})=>{
+                        const rev = revendasMap[String(o.Revenda)] || o.Revenda || '-';
+                        const nro = o['Numero OS'] || '-';
+                        const emi = formatDate(o.Emissao);
+                        const dias = calcularDiasEmAberto(o);
+                        const esc = getEscalonamento(t,dias,o.Revenda);
+                        const cons = o.Consultor || '';
+                        return `<tr>
+                            <td>${o.Tipo||'-'}</td><td>${rev}</td><td>${nro}</td><td>${emi}</td><td>${dias}</td><td>${esc}</td><td>${cons}</td>
+                        </tr>`;
+                    }).join('');
+                    const tbody = content.querySelector('#usuario-os-tbody');
+                    if (tbody) tbody.innerHTML = rows || '<tr><td colspan="7" style="text-align:center; padding:12px;">Nenhuma OS encontrada</td></tr>';
+                    const sum = content.querySelector('#usuario-os-summary');
+                    if (sum) sum.textContent = `Tipos atendidos: ${at.tipos.join(', ')||'—'} • Revendas atendidas: ${at.revs.map(r=>revendasMap[r]).join(', ')||'—'} • Consultor: ${consCount} (Ext:${consCountExterna}, Int:${consCountInterna}) • Escalonamento: ${escCount} (Ext:${escCountExterna}, Int:${escCountInterna}) • Exibidas: ${filtered.length}`;
+                    
+                }
+                function getUsuarioMatchedItems(userOut){
+                    const tiposSel = getTiposSel();
+                    const revsSel = getRevsSel();
+                    const sitSel = getSitSel();
+                    const critSel = getCritSel();
+                    const datasets = [];
+                    if (tiposSel.includes('externa')) datasets.push((osData.externa||[]).map(o=>({o,t:'externa'})));
+                    if (tiposSel.includes('interna')) datasets.push((osData.interna||[]).map(o=>({o,t:'interna'})));
+                    if (tiposSel.includes('garantia')) datasets.push((osData.garantia||[]).map(o=>({o,t:'garantia'})));
+                    const flat = datasets.flat();
+                    const userNorm = normalizeNomeResponsavel(userOut);
+                    return flat.filter(({o,t})=>{
+                        const sitRaw = String(o['Situacao OS']||'');
+                        if (sitSel && sitSel!=='Todos' && sitRaw!==sitSel) return false;
+                        const rev = String(o.Revenda||'');
+                        if (revsSel.length && !revsSel.includes(rev)) return false;
+                        const dias = calcularDiasEmAberto(o);
+                        const esc = getEscalonamento(t,dias,o.Revenda);
+                        const consNorm = normalizeNomeResponsavel(o.Consultor||'');
+                        const escMatch = normalizeNomeResponsavel(esc)===userNorm;
+                        const consMatch = consNorm.includes(userNorm);
+                        const histMatch = normalizeNomeResponsavel((historicoEscalonamento||{})[o.Cahve]||'')===userNorm;
+                        const defFirstMatch = normalizeNomeResponsavel(getEscalonamentoDefault(t, t==='garantia'?12:5, o.Revenda))===userNorm;
+                        const info = parseTransferInfo(o.Observacao||'');
+                        const transferFromUser = info ? normalizeNomeResponsavel(info.from||'')===userNorm : false;
+                        let match = false;
+                        if (critSel==='consultor') match = consMatch;
+                        else if (critSel==='escalonamento') match = escMatch || histMatch || defFirstMatch || transferFromUser;
+                        else match = consMatch || escMatch || histMatch || defFirstMatch || transferFromUser;
+                        return match;
+                    });
+                }
+                function revertTransfersForUser(userOut,userSub,tiposSel,revsSel){
+                    const datasets = [];
+                    if (tiposSel.includes('externa')) datasets.push((osData.externa||[]).map(o=>({o,t:'externa'})));
+                    if (tiposSel.includes('interna')) datasets.push((osData.interna||[]).map(o=>({o,t:'interna'})));
+                    if (tiposSel.includes('garantia')) datasets.push((osData.garantia||[]).map(o=>({o,t:'garantia'})));
+                    const flat = datasets.flat();
+                    let count = 0;
+                    const keys = [];
+                    flat.forEach(({o})=>{
+                        const rev = String(o.Revenda||'');
+                        if (revsSel.length && !revsSel.includes(rev)) return;
+                        const info = parseTransferInfo(o.Observacao||'');
+                        if (!info) return;
+                        const fromN = normalizeNomeResponsavel(info.from||'');
+                        const toN = normalizeNomeResponsavel(info.to||'');
+                        if (fromN===normalizeNomeResponsavel(userOut) || toN===normalizeNomeResponsavel(userSub)) {
+                            const base = extrairObservacaoSemStatus(o.Observacao)||'';
+                            o.Observacao = `(Retornado para ${info.from} de ${info.to}) ${base}`.trim();
+                            keys.push(getOSKey(o));
+                            count++;
+                        }
+                    });
+                    if (count>0) saveOSData(keys);
+                    try { localStorage.setItem('mostrarOSFeedback', `Transferências revertidas: ${count} OS.`); } catch(_) {}
+                }
+                function applyOverrides(userOut,userSub,tiposSel,revsSel){
+                    let changed = 0;
+                    let map;
+                    try { map = JSON.parse(localStorage.getItem('escalonamentoCustomMap')||'{}'); } catch(_) { map = {}; }
+                    tiposSel.forEach(t=>{
+                        const faixas = getFaixasOptions(t);
+                        revsSel.forEach(r=>{
+                            faixas.forEach(f=>{
+                                const d = midDias(f);
+                                const curDef = getEscalonamentoDefault(t,d,r);
+                                if (normalizeNomeResponsavel(curDef)===normalizeNomeResponsavel(userOut)) {
+                                    const key = `${String(t).toLowerCase()}|${String(r)}|${String(f)}`;
+                                    const prev = map[key];
+                                    if (normalizeNomeResponsavel(prev)!==normalizeNomeResponsavel(userSub)) {
+                                        setEscalonamentoOverride(t,r,f,userSub);
+                                        changed++;
+                                    }
+                                }
+                            });
+                        });
+                    });
+                    let affectedByEsc = 0;
+                    let affectedConsultor = 0;
+                    const datasets = [];
+                    if (tiposSel.includes('externa')) datasets.push((osData.externa||[]).map(o=>({o,t:'externa'})));
+                    if (tiposSel.includes('interna')) datasets.push((osData.interna||[]).map(o=>({o,t:'interna'})));
+                    if (tiposSel.includes('garantia')) datasets.push((osData.garantia||[]).map(o=>({o,t:'garantia'})));
+                    const flat = datasets.flat();
+                    flat.forEach(({o,t})=>{
+                        const rev = o.Revenda;
+                        const sit = String(o['Situacao OS']||'').toLowerCase();
+                        if (!sit.includes('abert')) return;
+                        if (revsSel.length && !revsSel.includes(String(rev||''))) return;
+                        const dias = calcularDiasEmAberto(o);
+                        const cur = getEscalonamento(t,dias,rev);
+                        if (normalizeNomeResponsavel(cur)===normalizeNomeResponsavel(userOut)) affectedByEsc++;
+                        const cons = normalizeNomeResponsavel(o.Consultor||'');
+                        if (cons===normalizeNomeResponsavel(userOut)) affectedConsultor++;
+                    });
+                    const msg = `Roteamento aplicado: ${changed} regra(s). OS com Consultor=\"${userOut}\": ${affectedConsultor}. Por escalonamento: ${affectedByEsc}.`;
+                    try { localStorage.setItem('mostrarOSFeedback', msg); } catch(_) {}
+                }
+                function revertOverrides(userOut,tiposSel,revsSel){
+                    try{
+                        const map = JSON.parse(localStorage.getItem('escalonamentoCustomMap')||'{}');
+                        tiposSel.forEach(t=>{
+                            const faixas = getFaixasOptions(t);
+                            revsSel.forEach(r=>{
+                                faixas.forEach(f=>{
+                                    const key = `${String(t).toLowerCase()}|${String(r)}|${String(f)}`;
+                                    const cur = map[key];
+                                    if (cur && normalizeNomeResponsavel(cur)===normalizeNomeResponsavel(userOut)) {
+                                        delete map[key];
+                                    }
+                                });
+                            });
+                        });
+                        localStorage.setItem('escalonamentoCustomMap', JSON.stringify(map));
+                    }catch(_){}
+                }
+                function transferCurrent(userOut,userSub,tiposSel,revsSel){
+                    if (!userOut || !userSub || normalizeNomeResponsavel(userOut)===normalizeNomeResponsavel(userSub)) { try { localStorage.setItem('mostrarOSFeedback', 'Selecione usuários distintos para transferir.'); } catch(_) {} return 0; }
+                    const matched = getUsuarioMatchedItems(userOut);
+                    let count = 0;
+                    const keys = [];
+                    matched.forEach(({o,t})=>{
+                        const dias = calcularDiasEmAberto(o);
+                        const cur = getEscalonamento(t,dias,o.Revenda);
+                        const fromLabel = userOut || cur;
+                        const base = extrairObservacaoSemStatus(o.Observacao)||'';
+                        o.Observacao = `(Transferido de ${fromLabel} para ${userSub}) ${base}`.trim();
+                        keys.push(getOSKey(o));
+                        count++;
+                    });
+                    if (count>0) { saveOSData(keys); }
+                    return count;
+                }
+                function transferByKeys(userSub, keys){
+                    let count = 0;
+                    const validKeys = Array.isArray(keys) ? keys : [];
+                    const userOut = document.querySelector('#mostrar-os-user-out')?.value || '';
+                    if (!userOut || !userSub || normalizeNomeResponsavel(userOut)===normalizeNomeResponsavel(userSub)) { try { localStorage.setItem('mostrarOSFeedback', 'Selecione usuários distintos para transferir.'); } catch(_) {} return 0; }
+                    validKeys.forEach(key => {
+                        const os = findOSByKey(key);
+                        if (!os) return;
+                        const t = String(os.Tipo || '').toLowerCase() || 'externa';
+                        const dias = calcularDiasEmAberto(os);
+                        const cur = getEscalonamento(t,dias,os.Revenda);
+                        const fromLabel = userOut || cur;
+                        const base = extrairObservacaoSemStatus(os.Observacao)||'';
+                        os.Observacao = `(Transferido de ${fromLabel} para ${userSub}) ${base}`.trim();
+                        count++;
+                    });
+                    if (count>0) saveOSData(validKeys);
+                    return count;
+                }
+                function revertOverridesFixed(userOut,tiposSel,revsSel){
+                    try{
+                        const map = JSON.parse(localStorage.getItem('escalonamentoCustomMap')||'{}');
+                        let removed = 0;
+                        tiposSel.forEach(t=>{
+                            const faixas = getFaixasOptions(t);
+                            revsSel.forEach(r=>{
+                                faixas.forEach(f=>{
+                                    const key = `${String(t).toLowerCase()}|${String(r)}|${String(f)}`;
+                                    const def = getEscalonamentoDefault(t, midDias(f), r);
+                                    if (normalizeNomeResponsavel(def)===normalizeNomeResponsavel(userOut) && map[key]) {
+                                        delete map[key];
+                                        removed++;
+                                    }
+                                });
+                            });
+                        });
+                        localStorage.setItem('escalonamentoCustomMap', JSON.stringify(map));
+                        try { localStorage.setItem('mostrarOSFeedback', `Roteamento revertido: ${removed} regra(s).`); } catch(_) {}
+                    }catch(_){}}
+                
+                
+                
+                
+                const ownerEl = content.querySelector('#perm-owner');
+                if (ownerEl) ownerEl.addEventListener('change', ()=>{ updatePermStatusUI(); renderPermResults(); });
+                const viewerEl = content.querySelector('#perm-viewer');
+                if (viewerEl) viewerEl.addEventListener('change', ()=>{ updatePermStatusUI(); renderPermResults(); });
+                const tipoEl = content.querySelector('#perm-tipo');
+                if (tipoEl) tipoEl.addEventListener('change', ()=>{ renderPermResults(); });
+                content.addEventListener('click', (e)=>{
+                    const tgt = e.target;
+                    if (!tgt || !tgt.id) return;
+                    if (tgt.id==='btn-view-perm-grant') { grantViewPerm(); }
+                    else if (tgt.id==='btn-view-perm-revoke') { revokeViewPerm(); }
+                    else if (tgt.id==='btn-perm-aplicar') {
+                        const owner = content.querySelector('#perm-owner')?.value || '';
+                        const tipo = content.querySelector('#perm-tipo')?.value || 'todos';
+                        const allow = content.querySelector('#perm-allow')?.value || 'sim';
+                        const viewerSel = content.querySelector('#perm-viewer')?.value || '';
+                        if (allow==='sim') grantPermForTipo(viewerSel, owner, tipo); else revokePermForTipo(viewerSel, owner, tipo);
+                        updatePermStatusUI();
+                        renderPermResults();
+                    }
+                });
+                updatePermStatusUI();
+                renderPermResults();
+            } catch(_) {}
+        }
+
+        function renderEscConfigList() {
+            const content = document.getElementById('usuarios-escalonamento-content');
+            if (!content) return;
+            const garantia = `
+                <div style="margin-bottom:16px;">
+                    <h3 style="margin:0 0 8px 0">Garantia</h3>
+                    <div class="table-container">
+                        <table style="width:100%">
+                            <thead>
+                                <tr><th>Revenda</th><th>0–25</th><th>26–35</th><th>36–50</th><th>51–90</th><th>90+</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>Recife/Petrolina (1/4)</td><td>Flávia</td><td>—</td><td>Graziela</td><td>Johnny</td><td>Antônio Gustavo</td></tr>
+                                <tr><td>Natal (2)</td><td>Giovana</td><td>—</td><td>Graziela</td><td>Johnny</td><td>Antônio Gustavo</td></tr>
+                                <tr><td>Fortaleza (3)</td><td>Giovana</td><td>Wanderley</td><td>Graziela</td><td>Johnny</td><td>Antônio Gustavo</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+            const externaInterna = `
+                <div style="margin-bottom:16px;">
+                    <h3 style="margin:0 0 8px 0">Externa</h3>
+                    <div class="table-container">
+                        <table style="width:100%">
+                            <thead>
+                                <tr><th>Revenda</th><th>0–10</th><th>11–15</th><th>16–20</th><th>21–30</th><th>30+</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>Recife/Natal/Petrolina (1/2/4)</td><td>Isabelle</td><td>Graziela</td><td>Graziela</td><td>Johnny</td><td>Antônio Gustavo</td></tr>
+                                <tr><td>Fortaleza (3)</td><td>Ana Leya</td><td>Wanderley</td><td>Graziela</td><td>Johnny</td><td>Antônio Gustavo</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div>
+                    <h3 style="margin:0 0 8px 0">Interna</h3>
+                    <div class="table-container">
+                        <table style="width:100%">
+                            <thead>
+                                <tr><th>Revenda</th><th>0–10</th><th>11–15</th><th>16–20</th><th>21–30</th><th>30+</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>Recife/Natal/Petrolina (1/2/4)</td><td>Bruna</td><td>Graziela</td><td>Graziela</td><td>Johnny</td><td>Antônio Gustavo</td></tr>
+                                <tr><td>Fortaleza (3)</td><td>Ana Leya</td><td>Wanderley</td><td>Graziela</td><td>Johnny</td><td>Antônio Gustavo</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+            const configUI = `
+                <div style="margin-top:16px; padding:12px; border:1px solid #eee; border-radius:8px;">
+                    <h3 style="margin:0 0 8px 0">Configurar Lógica por Usuário</h3>
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <select id="esc-user" class="filter-select" style="max-width:240px;"></select>
+                        <select id="esc-tipo-set" class="filter-select" style="max-width:160px;">
+                            <option value="externa">Externa</option>
+                            <option value="interna">Interna</option>
+                            <option value="garantia">Garantia</option>
+                        </select>
+                        <select id="esc-revenda-set" class="filter-select" style="max-width:160px;">
+                            <option value="1">Recife</option>
+                            <option value="2">Natal</option>
+                            <option value="3">Fortaleza</option>
+                            <option value="4">Petrolina</option>
+                        </select>
+                        <select id="esc-faixa-set" class="filter-select" style="max-width:160px;"></select>
+                        <button class="btn" id="btn-save-esc">Salvar</button>
+                        <div id="esc-save-feedback" style="margin-left:8px; font-weight:600;"></div>
+                    </div>
+                </div>`;
+            const tester = `
+                <div style="margin-top:16px; padding:12px; border:1px solid #eee; border-radius:8px;">
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <select id="esc-tipo" class="filter-select" style="max-width:160px;">
+                            <option value="externa">Externa</option>
+                            <option value="interna">Interna</option>
+                            <option value="garantia">Garantia</option>
+                        </select>
+                        <select id="esc-revenda" class="filter-select" style="max-width:160px;">
+                            <option value="1">Recife</option>
+                            <option value="2">Natal</option>
+                            <option value="3">Fortaleza</option>
+                            <option value="4">Petrolina</option>
+                        </select>
+                        <input id="esc-dias" type="number" min="0" class="filter-input" placeholder="Dias" style="max-width:120px;" />
+                        <button class="btn" id="btn-test-esc">Testar</button>
+                        <div id="esc-resultado" style="margin-left:8px; font-weight:600;"></div>
+                    </div>
+                </div>`;
+            content.innerHTML = garantia + externaInterna + configUI + tester;
+            const userSel = document.getElementById('esc-user');
+            if (userSel) {
+                const users = (usuariosCache || []).map(u => u.nome_completo || u.usuario).filter(Boolean);
+                const uniq = Array.from(new Set(users));
+                userSel.innerHTML = uniq.map(u => `<option value="${u}">${u}</option>`).join('');
+            }
+            const tipoSet = document.getElementById('esc-tipo-set');
+            const faixaSet = document.getElementById('esc-faixa-set');
+            function populateFaixas() {
+                const t = tipoSet ? tipoSet.value : 'externa';
+                const fx = getFaixasOptions(t);
+                if (faixaSet) faixaSet.innerHTML = fx.map(f => `<option value="${f}">${f}</option>`).join('');
+            }
+            populateFaixas();
+            if (tipoSet) tipoSet.onchange = populateFaixas;
+            const saveBtn = document.getElementById('btn-save-esc');
+            if (saveBtn) {
+                saveBtn.onclick = function() {
+                    const u = document.getElementById('esc-user')?.value || '';
+                    const t = document.getElementById('esc-tipo-set')?.value || 'externa';
+                    const r = document.getElementById('esc-revenda-set')?.value || '1';
+                    const f = document.getElementById('esc-faixa-set')?.value || '';
+                    if (!u || !f) return;
+                    setEscalonamentoOverride(t, r, f, u);
+                    const fb = document.getElementById('esc-save-feedback');
+                    if (fb) fb.textContent = 'Salvo';
+                };
+            }
+            const btn = document.getElementById('btn-test-esc');
+            if (btn) {
+                btn.onclick = function() {
+                    const tipo = document.getElementById('esc-tipo').value;
+                    const rev = document.getElementById('esc-revenda').value;
+                    const dias = parseInt(document.getElementById('esc-dias').value || '0', 10) || 0;
+                    const resp = getEscalonamento(tipo, dias, rev);
+                    const out = document.getElementById('esc-resultado');
+                    if (out) out.textContent = resp ? resp : '';
+                };
+            }
+        }
+
         function showLoading(tab) {
             let tbody = document.getElementById(`tbody-${tab}`);
             if (!tbody) {
@@ -9314,8 +10244,88 @@ function getPrevEscalonamentoByDias(tipo, dias, revenda) {
                 if (!error) return;
                 lastErr = error;
             } catch (e) { lastErr = e; }
-            const { error: e2 } = await supabase.from(tabelaBase).update(updateData).eq('Cahve', osId);
-            if (e2) throw e2;
+            try {
+                const { error: e2 } = await supabase.from(tabelaBase).update(updateData).eq('Cahve', osId);
+                if (!e2) return;
+                lastErr = e2;
+            } catch (e) { lastErr = e; }
+            const { error: e3 } = await supabase.from(tabelaBase).update(updateData).eq('Numero OS', osId);
+            if (e3) throw e3;
+        }
+
+        async function updateOSRecord(os, updateData) {
+            const idVariants = [os.Chave, os['Chave'], os.Cahve, os['Numero OS']].map(v => v || '').filter(v => String(v).trim() !== '');
+            for (const id of idVariants) {
+                try {
+                    if (os.Chave || os['Chave']) {
+                        const { error } = await supabase.from(tabelaBase).update(updateData).eq('Chave', id);
+                        if (!error) return true;
+                    }
+                    if (os.Cahve) {
+                        const { error } = await supabase.from(tabelaBase).update(updateData).eq('Cahve', id);
+                        if (!error) return true;
+                    }
+                    if (os['Numero OS']) {
+                        const { error } = await supabase.from(tabelaBase).update(updateData).eq('Numero OS', id);
+                        if (!error) return true;
+                    }
+                } catch (_) {}
+            }
+            return false;
+        }
+        async function saveOSData(keys) {
+            try {
+                const canSave = canUseSupabase();
+                const tabs = ['externa','interna','garantia'];
+                let updated = 0;
+                let errors = 0;
+                const shouldUpdate = (os) => {
+                    if (Array.isArray(keys) && keys.length) {
+                        const variants = [String(os.Cahve||''), String(os.Chave||os['Chave']||''), String(os['Numero OS']||'')].filter(Boolean);
+                        return keys.some(k => variants.includes(String(k)));
+                    }
+                    const obs = String(os.Observacao || '');
+                    return /(\(Transferido de|\(Retornado para)/.test(obs);
+                };
+                const all = tabs.flatMap(t => Array.isArray(osData[t]) ? osData[t] : []);
+                for (const os of all) {
+                    if (!shouldUpdate(os)) continue;
+                    const obs = os.Observacao || '';
+                    if (canSave) {
+                        try {
+                            const ok = await updateOSRecord(os, { 'Observacao': obs });
+                            if (!ok) throw new Error('Falha na atualização por qualquer chave disponível');
+                            updated++;
+                        } catch (e) {
+                            console.error('Erro ao salvar Observacao para OS', (os.Cahve||os.Chave||os['Chave']||os['Numero OS']), e);
+                            errors++;
+                        }
+                    } else {
+                        // Persistência local como fallback
+                        try {
+                            const snapshot = {
+                                externa: osData.externa || [],
+                                interna: osData.interna || [],
+                                garantia: osData.garantia || []
+                            };
+                            localStorage.setItem('osDataSnapshot', JSON.stringify(snapshot));
+                            updated++;
+                        } catch (e) {
+                            console.warn('Falha ao salvar localmente os dados da OS:', e);
+                            errors++;
+                        }
+                    }
+                }
+                if (updated > 0) {
+                    showStatusLogToast(`Dados de ${updated} OS salvos${errors ? ` (${errors} erro(s))` : ''}.`, errors ? 'warning' : 'success');
+                } else if (!Array.isArray(keys) || keys.length === 0) {
+                    // Nenhuma OS elegível para salvar
+                    showStatusLogToast('Nenhuma alteração para salvar.', 'warning');
+                }
+            } catch (e) {
+                console.error('Erro em saveOSData:', e);
+                showErrorMessage('Falha ao salvar alterações das OS.');
+            }
         }
         async function testSupabaseConnection() {
             try {
@@ -9371,6 +10381,13 @@ function getPrevEscalonamentoByDias(tipo, dias, revenda) {
         // --- FUNÇÕES DO DASHBOARD - ATUALIZADAS ---
         async function loadDashboardData() {
             try {
+                if (!canUseSupabase()) {
+                    const all = [...(osData.externa||[]), ...(osData.interna||[]), ...(osData.garantia||[])];
+                    const filteredData = applyDashboardFilters(all);
+                    updateDashboardTotals(filteredData);
+                    generateCharts(filteredData);
+                    return;
+                }
                 const { data, error } = await supabase.from(tabelaBase).select('*');
                 if (error) throw error;
                 
@@ -10598,45 +11615,9 @@ function getPrevEscalonamentoByDias(tipo, dias, revenda) {
         }
 
         function retornarResponsavel(tab) {
-            const checkboxes = document.querySelectorAll(`.transfer-checkbox-${tab}:checked`);
-            if (checkboxes.length === 0) {
-                alert('Selecione pelo menos uma OS para retornar.');
-                return;
-            }
-
-            const keys = Array.from(checkboxes).map(cb => cb.value);
-            let updated = 0;
-
-            keys.forEach(key => {
-                const os = findOSByKey(key);
-                if (!os) return;
-                const info = parseTransferInfo(os.Observacao || '');
-                const dias = calcularDiasEmAberto(os);
-                const currentEsc = getEscalonamento(tab, dias, os.Revenda);
-
-                // Restringe retorno apenas quando o escalonamento atual é de um gestor
-                if (!MANAGERS.includes(currentEsc)) return;
-
-                const from = info ? info.from : currentEsc;
-                const to = info ? info.to : currentEsc;
-
-                const observacaoBase = extrairObservacaoSemStatus(os.Observacao) || '';
-                os.Observacao = `(Retornado para ${from} de ${to}) ${observacaoBase}`.trim();
-                updated++;
-            });
-
-            if (updated > 0) {
-                saveOSData();
-                populateTransferenciaTables();
-                filterAndDisplayData(tab);
-                alert(`${updated} OS(s) retornada(s) ao responsável.`);
-            } else {
-                alert('Nenhuma OS elegível para retorno (somente gestores).');
-            }
+            alert('Retorno de transferência desativado. Observações não serão alteradas.');
         }
     </script>
-</body>
-</html>
 
             <div class="tab-content" id="transferencia-escalonamento">
                 <div class="tabs-container">
@@ -10795,14 +11776,15 @@ function getPrevEscalonamentoByDias(tipo, dias, revenda) {
                 </div>
             </div>
         <script>
-        async function verificarAlertasUnificados() {
-            try {
-                const { data, error } = await supabase.from(tabelaBase).select('*');
-                if (error) throw error;
-                let alertas = await fetchAlertasConfigSupabase();
-                if (!alertas || alertas.length === 0) {
-                    try { alertas = await seedAlertasIfEmpty(); } catch(_) {}
-                }
+async function verificarAlertasUnificados() {
+    try {
+        if (!canUseSupabase()) return;
+        const { data, error } = await supabase.from(tabelaBase).select('*');
+        if (error) throw error;
+        let alertas = await fetchAlertasConfigSupabase();
+        if (!alertas || alertas.length === 0) {
+            try { alertas = await seedAlertasIfEmpty(); } catch(_) {}
+        }
                 const notificacoes = await fetchHistoricoNotificacoesSupabase();
                 const historicoAtual = {};
                 const processed = new Set();
@@ -10966,3 +11948,5 @@ function getPrevEscalonamentoByDias(tipo, dias, revenda) {
             }
         }
         </script>
+    </body>
+    </html>
