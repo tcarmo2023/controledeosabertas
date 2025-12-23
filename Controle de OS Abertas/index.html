@@ -2309,6 +2309,7 @@
                 <div class="tab" data-tab="garantia">OS Garantia</div>
                 <div class="tab" data-tab="atualizacao">Atualização</div>
                 <div class="tab" data-tab="atualizar-valores">Atualizar Valores (CSV)</div>
+                <div class="tab" data-tab="atualizar-observacoes">Atualizar Observações (CSV)</div>
                 <div class="tab" data-tab="importacao">Importação de Dados</div>
                 <div class="tab" data-tab="dashboard">Dashboard</div>
                 <div class="tab" data-tab="alerta" id="alerta-tab">Alerta</div>
@@ -2593,6 +2594,10 @@
                         </div>
                         <button class="btn btn-warning" id="btn-atualizar-status" disabled>Atualizar Status</button>
                 </div>
+                <div class="form-group" style="margin-left: 12px; display:flex; gap:8px; align-items:center;">
+                    <input type="text" class="filter-input" id="batch-acao" placeholder="Ação / Atualização...">
+                    <button class="btn btn-warning" id="btn-atualizar-acao" disabled>Atualizar Ação</button>
+                </div>
                 <button class="btn btn-warning" id="btn-limpar-selecao">Limpar</button>
                 <button class="btn btn-danger" id="btn-limpar-transferencias">Limpar observações de transferência</button>
                 <div class="form-group" style="margin-left: 12px; display: flex; gap: 8px; align-items: center;">
@@ -2670,6 +2675,34 @@
                         <summary>Instruções</summary>
                         <ul>
                             <li>Somente atualiza: Total Pecas, Total Servico e Total OS.</li>
+                            <li>Correspondência prioriza "Chave"; caso ausente, usa "Numero OS" + "Tipo" (e Revenda, se fornecida).</li>
+                            <li>Após aplicar, as listas e totais são atualizados nas abas Externa, Interna e Garantia, e o Dashboard é recarregado.</li>
+                        </ul>
+                    </details>
+                </div>
+            </div>
+            <!-- Aba: Atualizar Observações (CSV) -->
+            <div class="tab-content" id="atualizar-observacoes">
+                <div class="filters" style="gap: 16px; align-items: flex-end;">
+                    <div style="flex: 1;">
+                        <label for="csv-observacoes-file">Arquivo CSV com chave e Observação</label>
+                        <input type="file" id="csv-observacoes-file" accept=".csv" />
+                        <small>Colunas esperadas: Chave ou Numero OS; Tipo; Revenda; Observacao</small>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button id="btn-validar-csv-observacoes" class="btn-primary">Validar CSV</button>
+                        <button id="btn-aplicar-csv-observacoes" class="btn-warning" disabled>Aplicar Observações</button>
+                    </div>
+                </div>
+                <div id="csv-observacoes-status" class="status-box" style="margin-top: 12px;">
+                    <div id="csv-observacoes-resumo">Nenhum arquivo carregado.</div>
+                    <div id="csv-observacoes-detalhes" style="margin-top: 8px;"></div>
+                </div>
+                <div style="margin-top: 16px;">
+                    <details>
+                        <summary>Instruções</summary>
+                        <ul>
+                            <li>Atualiza somente a coluna Observacao.</li>
                             <li>Correspondência prioriza "Chave"; caso ausente, usa "Numero OS" + "Tipo" (e Revenda, se fornecida).</li>
                             <li>Após aplicar, as listas e totais são atualizados nas abas Externa, Interna e Garantia, e o Dashboard é recarregado.</li>
                         </ul>
@@ -3257,6 +3290,8 @@
         const CSV_VAL_KEY_FIELDS = ['Chave', 'Numero OS'];
         const revendasReverse = { 'Recife':'1', 'Natal':'2', 'Fortaleza':'3', 'Petrolina':'4' };
         let csvValoresState = { records: [], valid: false, headers: [], issues: [] };
+        const CSV_OBS_REQUIRED = ['Observacao'];
+        let csvObservacoesState = { records: [], valid: false, headers: [], issues: [] };
 
         // Cache de usuários para edição
         let usuariosCache = [];
@@ -5047,6 +5082,8 @@
             document.getElementById('select-all-os').addEventListener('change', toggleSelectAll);
             document.getElementById('btn-buscar-os').addEventListener('click', searchIndividualOS);
             document.getElementById('btn-atualizar-individual').addEventListener('click', updateIndividualOS);
+            const btnAtualizarAcao = document.getElementById('btn-atualizar-acao');
+            if (btnAtualizarAcao) btnAtualizarAcao.addEventListener('click', updateSelectedAcao);
             
             // Event listeners para ordenação - CORREÇÃO APLICADA
             document.querySelectorAll('th.sortable').forEach(th => {
@@ -5059,6 +5096,11 @@
             // Event listener para o select de status em lote
             document.getElementById('batch-status').addEventListener('change', function() {
                 document.getElementById('btn-atualizar-status').disabled = selectedOS.size === 0 || this.value === '';
+            });
+            const batchAcaoEl = document.getElementById('batch-acao');
+            if (batchAcaoEl) batchAcaoEl.addEventListener('input', function(){
+                const btn = document.getElementById('btn-atualizar-acao');
+                if (btn) btn.disabled = selectedOS.size === 0 || String(this.value||'').trim() === '';
             });
             const filterStatusEl = document.getElementById('batch-filter-status');
             if (filterStatusEl) filterStatusEl.addEventListener('change', () => { renderBatchOSList(); updateSelectedCount(); });
@@ -5193,6 +5235,22 @@
             }
             if (btnValidarCSV) btnValidarCSV.addEventListener('click', handleValidarCSVValores);
             if (btnAplicarCSV) btnAplicarCSV.addEventListener('click', applyCSVValueUpdates);
+
+            // --- Eventos da aba Atualizar Observações (CSV) ---
+            const btnValidarCSVObs = document.getElementById('btn-validar-csv-observacoes');
+            const btnAplicarCSVObs = document.getElementById('btn-aplicar-csv-observacoes');
+            const inputCSVObs = document.getElementById('csv-observacoes-file');
+            if (inputCSVObs) {
+                inputCSVObs.addEventListener('change', function(){
+                    const resumo = document.getElementById('csv-observacoes-resumo');
+                    const detalhes = document.getElementById('csv-observacoes-detalhes');
+                    if (resumo) resumo.textContent = this.files && this.files.length ? `Arquivo selecionado: ${this.files[0].name}` : 'Nenhum arquivo carregado.';
+                    if (detalhes) detalhes.textContent = '';
+                    if (btnAplicarCSVObs) btnAplicarCSVObs.disabled = true;
+                });
+            }
+            if (btnValidarCSVObs) btnValidarCSVObs.addEventListener('click', handleValidarCSVObservacoes);
+            if (btnAplicarCSVObs) btnAplicarCSVObs.addEventListener('click', applyCSVObservacaoUpdates);
 
             // --- Eventos da aba Importação de Dados ---
             const btnParseImport = document.getElementById('btn-parse-import');
@@ -5444,8 +5502,9 @@
                 const internaTab = document.querySelector('.tab[data-tab="interna"]');
                 const garantiaTab = document.querySelector('.tab[data-tab="garantia"]');
                 const atualizacaoTab = document.querySelector('.tab[data-tab="atualizacao"]');
-                const atualizarValoresTab = document.querySelector('.tab[data-tab="atualizar-valores"]');
-                const importacaoTab = document.querySelector('.tab[data-tab="importacao"]');
+        const atualizarValoresTab = document.querySelector('.tab[data-tab="atualizar-valores"]');
+        const atualizarObsTab = document.querySelector('.tab[data-tab="atualizar-observacoes"]');
+        const importacaoTab = document.querySelector('.tab[data-tab="importacao"]');
                 const dashboardTab = document.querySelector('.tab[data-tab="dashboard"]');
                 const alertaTab = document.getElementById('alerta-tab');
                 const statusTab = document.querySelector('.tab[data-tab="gerenciar-status"]');
@@ -5458,8 +5517,9 @@
                 const internaContent = document.getElementById('interna');
                 const garantiaContent = document.getElementById('garantia');
                 const atualizacaoContent = document.getElementById('atualizacao');
-                const atualizarValoresContent = document.getElementById('atualizar-valores');
-                const importacaoContent = document.getElementById('importacao');
+        const atualizarValoresContent = document.getElementById('atualizar-valores');
+        const atualizarObsContent = document.getElementById('atualizar-observacoes');
+        const importacaoContent = document.getElementById('importacao');
                 const dashboardContent = document.getElementById('dashboard');
                 const alertaContent = document.getElementById('alerta');
                 const statusContent = document.getElementById('gerenciar-status');
@@ -5469,7 +5529,7 @@
 
                 if (isAdmin) {
                     // Administrador: vê todas as abas
-                    [externaTab, internaTab, garantiaTab, atualizacaoTab, atualizarValoresTab, importacaoTab,
+                    [externaTab, internaTab, garantiaTab, atualizacaoTab, atualizarValoresTab, atualizarObsTab, importacaoTab,
                      dashboardTab, alertaTab, statusTab, transferTab, logsTab, cadTab].forEach(tab => {
                         if (tab) tab.style.display = '';
                     });
@@ -5480,11 +5540,11 @@
                         if (tab) tab.style.display = '';
                     });
                     // Oculta Gerenciar Status para gestor e demais abas restritas; mantém Atualização se liberada
-                    [statusTab, (canUseAtualizacao ? null : atualizacaoTab), atualizarValoresTab, importacaoTab, cadTab].forEach(tab => {
+                    [statusTab, (canUseAtualizacao ? null : atualizacaoTab), atualizarValoresTab, atualizarObsTab, importacaoTab, cadTab].forEach(tab => {
                         if (tab) tab.style.display = 'none';
                     });
                     // Se a tab atual foi ocultada, voltar para Externa (não troca se Atualização estiver liberada)
-                    const gestorBlocked = ['atualizar-valores', 'cadastro-usuarios', 'gerenciar-status'];
+                    const gestorBlocked = ['atualizar-valores', 'atualizar-observacoes', 'cadastro-usuarios', 'gerenciar-status'];
                     if (gestorBlocked.includes(currentTab) || (currentTab === 'atualizacao' && !canUseAtualizacao)) {
                         if (externaTab && externaContent) {
                             document.querySelectorAll('.tab.active, .tab-content.active').forEach(el => el.classList.remove('active'));
@@ -5500,11 +5560,11 @@
                         if (tab) tab.style.display = '';
                     });
                     // Oculta demais abas; mantém Atualização visível se em whitelist
-                    [statusTab, (canUseAtualizacao ? null : atualizacaoTab), atualizarValoresTab, importacaoTab, alertaTab, transferTab, logsTab, cadTab].forEach(tab => {
+                    [statusTab, (canUseAtualizacao ? null : atualizacaoTab), atualizarValoresTab, atualizarObsTab, importacaoTab, alertaTab, transferTab, logsTab, cadTab].forEach(tab => {
                         if (tab) tab.style.display = 'none';
                     });
                     // Se a tab atual foi ocultada, voltar para Externa
-                    const blockedTabs = ['gerenciar-status', 'atualizar-valores', 'importacao', 'alerta', 'transferencia-escalonamento', 'logs-status', 'cadastro-usuarios'];
+                    const blockedTabs = ['gerenciar-status', 'atualizar-valores', 'atualizar-observacoes', 'importacao', 'alerta', 'transferencia-escalonamento', 'logs-status', 'cadastro-usuarios'];
                     const atualizacaoBloqueada = (!canUseAtualizacao && currentTab === 'atualizacao');
                     if (blockedTabs.includes(currentTab) || atualizacaoBloqueada) {
                         if (externaTab && externaContent) {
@@ -6658,6 +6718,13 @@
             if (detalhesEl) detalhesEl.innerHTML = detailsHtml;
         }
 
+        function showCSVObservResumo(message, detailsHtml = '') {
+            const resumoEl = document.getElementById('csv-observacoes-resumo');
+            const detalhesEl = document.getElementById('csv-observacoes-detalhes');
+            if (resumoEl) resumoEl.textContent = message;
+            if (detalhesEl) detalhesEl.innerHTML = detailsHtml;
+        }
+
         async function readFileAsText(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -7587,6 +7654,111 @@
             showCSVResumo(`Atualização concluída. Sucesso: ${updatedCount}. Não encontrados: ${notFoundCount}. Ignorados: ${skippedCount}. Erros: ${errorCount}.`);
             const btnValidar = document.getElementById('btn-validar-csv-valores');
             if (btnValidar) btnValidar.focus();
+        }
+
+        async function handleValidarCSVObservacoes() {
+            try {
+                const input = document.getElementById('csv-observacoes-file');
+                const btnAplicar = document.getElementById('btn-aplicar-csv-observacoes');
+                if (!input || !input.files || input.files.length === 0) {
+                    showCSVObservResumo('Nenhum arquivo carregado.');
+                    if (btnAplicar) btnAplicar.disabled = true;
+                    return;
+                }
+                const file = input.files[0];
+                const text = await readFileAsText(file);
+                const { headers, rows } = parseCSVText(text);
+                const headerMap = mapImportHeaders(headers);
+                const canonHeaders = Object.values(headerMap);
+                const normalizedRows = rows.map(r => normalizeImportRow(r, headerMap));
+                const hasKey = canonHeaders.includes('Chave') || canonHeaders.includes('Numero OS');
+                const missing = CSV_OBS_REQUIRED.filter(h => !canonHeaders.includes(h));
+                const ok = hasKey && missing.length === 0;
+                const issues = [];
+                if (!hasKey) issues.push('CSV deve conter "Chave" ou "Numero OS".');
+                if (missing.length) issues.push('Colunas ausentes: ' + missing.join(', '));
+                csvObservacoesState = { records: normalizedRows, valid: ok, headers: canonHeaders, issues };
+                if (!ok) {
+                    showCSVObservResumo('CSV inválido.', `<div class="error">${issues.join('<br>')}</div>`);
+                    if (btnAplicar) btnAplicar.disabled = true;
+                    return;
+                }
+                const withKey = normalizedRows.filter(r => String(r['Chave']||r['Numero OS']||'').trim().length);
+                const withObs = normalizedRows.filter(r => String(r['Observacao']||'').trim().length);
+                showCSVObservResumo(`Registros lidos: ${normalizedRows.length}. Com chave: ${withKey.length}. Com observação: ${withObs.length}.`);
+                if (btnAplicar) btnAplicar.disabled = normalizedRows.length === 0 || withObs.length === 0;
+            } catch (e) {
+                showCSVObservResumo('Erro ao validar CSV. Verifique o arquivo.');
+                const btnAplicar = document.getElementById('btn-aplicar-csv-observacoes');
+                if (btnAplicar) btnAplicar.disabled = true;
+            }
+        }
+
+        function updateLocalObservacaoFromRecord(rec) {
+            const obs = String(rec['Observacao']||'').trim();
+            if (!obs) return false;
+            const applyTo = (os) => {
+                if (!os) return false;
+                os['Observacao'] = obs;
+                return true;
+            };
+            let updated = false;
+            const keyField = CSV_VAL_KEY_FIELDS.find(k => rec[k] && String(rec[k]).trim().length);
+            if (keyField) {
+                const os = findOSByKey(rec[keyField]);
+                updated = applyTo(os);
+            } else if (rec['Numero OS']) {
+                const tipoLabel = rec['Tipo'] || null;
+                const os = tipoLabel ? findOSByNumeroTipo(rec['Numero OS'], tipoLabel) : null;
+                updated = applyTo(os);
+            }
+            return updated;
+        }
+
+        async function applyCSVObservacaoUpdates() {
+            const btnAplicar = document.getElementById('btn-aplicar-csv-observacoes');
+            if (btnAplicar) btnAplicar.disabled = true;
+            const rows = csvObservacoesState.records || [];
+            if (!rows.length) {
+                showCSVObservResumo('Nada para aplicar. Valide o CSV primeiro.');
+                return;
+            }
+            let updatedCount = 0, skippedCount = 0, errorCount = 0, notFoundCount = 0;
+            for (const rec of rows) {
+                const obs = String(rec['Observacao']||'').trim();
+                if (!obs) { skippedCount++; continue; }
+                const updateData = { 'Observacao': obs };
+                try {
+                    const keyField = ['Chave','Numero OS'].find(k => rec[k] && String(rec[k]).trim().length);
+                    let query = supabase.from(tabelaBase).update(updateData);
+                    let matchApplied = false;
+                    if (keyField) {
+                        query = query.eq('Chave', rec[keyField]);
+                        matchApplied = true;
+                    } else if (rec['Numero OS']) {
+                        query = query.eq('Numero OS', rec['Numero OS']);
+                        if (rec['Tipo']) query = query.eq('Tipo', rec['Tipo']);
+                        const revCode = getRevendaCode(rec['Revenda']);
+                        if (revCode) query = query.eq('Revenda', revCode);
+                        matchApplied = true;
+                    }
+                    if (!matchApplied) { skippedCount++; continue; }
+                    const { data, error } = await query.select();
+                    if (error) { errorCount++; continue; }
+                    const affected = Array.isArray(data) ? data.length : 0;
+                    if (affected > 0) {
+                        updatedCount += affected;
+                        updateLocalObservacaoFromRecord(rec);
+                    } else {
+                        notFoundCount++;
+                    }
+                } catch (e) {
+                    errorCount++;
+                }
+            }
+            await refreshAllTabsData();
+            setSuccessUpdateIndicator(new Date());
+            showCSVObservResumo(`Atualização concluída. Sucesso: ${updatedCount}. Não encontrados: ${notFoundCount}. Ignorados: ${skippedCount}. Erros: ${errorCount}.`);
         }
         // --- ABA CADASTRAR USUÁRIOS ---
         async function loadUsuariosList() {
@@ -8761,6 +8933,7 @@
 
         function renderBatchOSList() {
             const container = document.getElementById('batch-os-list');
+            if (!container) return;
             const filterStatusEl = document.getElementById('batch-filter-status');
             const filterEscEl = document.getElementById('batch-filter-escalonamento');
             const tipoEl = document.getElementById('batch-tipo');
@@ -8829,6 +9002,9 @@
             const atualizarBtn = document.getElementById('btn-atualizar-status');
             const batchStatusEl = document.getElementById('batch-status');
             if (atualizarBtn) atualizarBtn.disabled = count === 0 || !batchStatusEl || batchStatusEl.value === '';
+            const acaoBtn = document.getElementById('btn-atualizar-acao');
+            const acaoEl = document.getElementById('batch-acao');
+            if (acaoBtn) acaoBtn.disabled = count === 0 || !acaoEl || String(acaoEl.value||'').trim() === '';
         }
 
         function toggleSelectAll() {
@@ -8959,6 +9135,31 @@
             
             clearSelection();
             loadBatchOS();
+        }
+
+        async function updateSelectedAcao() {
+            const acaoEl = document.getElementById('batch-acao');
+            const novoTexto = acaoEl ? String(acaoEl.value||'').trim() : '';
+            if (selectedOS.size === 0 || !novoTexto) return;
+            if (!confirm(`Atualizar Ação/Atualização em ${selectedOS.size} OSs?`)) return;
+            let processed = 0;
+            let errors = 0;
+            for (const osId of selectedOS) {
+                try {
+                    const { error } = await supabase
+                        .from(tabelaBase)
+                        .update({ 'Acao / Atualizacao': novoTexto })
+                        .eq('Chave', osId);
+                    if (error) { errors++; } else { processed++; }
+                } catch(e) { errors++; }
+            }
+            if (errors > 0) {
+                alert(`${processed} OS atualizadas. ${errors} erros encontrados.`);
+            } else {
+                alert(`${processed} OS atualizadas com Ação/Atualização!`);
+            }
+            clearSelection();
+            try { await loadBatchOS(); } catch(_) {}
         }
 
         async function searchIndividualOS() {
@@ -9688,15 +9889,23 @@ function getEscalonamento(tab, dias, revenda) {
                     const allowed = tipos.filter(t=>canViewUserForTipo(viewer, owner, t));
                     if (!allowed.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:12px;">Sem permissão para exibir</td></tr>'; countEl.textContent = '0'; return; }
                     let rows = [];
+                    const seen = new Set();
+                    const ownerNorm = normalizeNomeResponsavel(owner);
                     for (const t of allowed) {
                         const data = await ensureTipoData(t);
                         (data||[]).forEach(o=>{
                             const dias = calcularDiasEmAberto(o);
                             const esc = getEscalonamento(t, dias, o.Revenda);
-                            if (normalizeNomeResponsavel(esc)===normalizeNomeResponsavel(owner)) {
+                            const consNorm = normalizeNomeResponsavel(o.Consultor||'');
+                            const escMatch = normalizeNomeResponsavel(esc)===ownerNorm;
+                            const consMatch = consNorm.includes(ownerNorm);
+                            if (escMatch || consMatch) {
+                                const key = getOSKey(o);
+                                if (key && seen.has(key)) return;
                                 const sit = o['Situacao OS'] || '-';
                                 const sitClass = sit === 'Aberta' ? 'status-aberta' : 'status-fechada';
                                 rows.push(`<tr><td>${revendasMap[o.Revenda]||o.Revenda}</td><td><strong>${o['Numero OS']||'-'}</strong></td><td><span class="status-badge ${sitClass}">${sit}</span></td><td>${o.Tipo||'-'}</td><td>${formatDate(o.Emissao)}</td><td>${dias}</td><td>${esc}</td><td>${o.Consultor||''}</td></tr>`);
+                                if (key) seen.add(key);
                             }
                         });
                     }
