@@ -11,10 +11,12 @@
                 var raw = localStorage.getItem('authUser');
                 var auth = raw ? JSON.parse(raw) : null;
                 window.NormaQCurrentUser = auth || null;
-                var requireLogin = !auth;
+                var inativosLocal = (function(){ try { return JSON.parse(localStorage.getItem('usuariosInativos')||'[]'); } catch(_) { return []; } })();
+                var inativoLocal = auth && Array.isArray(inativosLocal) && (inativosLocal.includes(auth.id) || inativosLocal.includes(auth.usuario));
+                var requireLogin = !auth || (auth && (auth.ativo === false || inativoLocal));
                 window.NormaQRequireLogin = requireLogin;
                 document.documentElement.classList.toggle('require-login', requireLogin);
-                if (auth) {
+                if (auth && !requireLogin) {
                     var el = document.getElementById('user-name');
                     if (el) el.textContent = auth.nome_completo || auth.usuario || 'Usuário';
                     var userWelcome = document.querySelector('.user-welcome');
@@ -35,10 +37,9 @@
         window.addEventListener('error', function(e){
             try {
                 const dbg = document.getElementById('debug-info');
-                if (dbg) {
-                    dbg.style.display = 'block';
-                    dbg.textContent = `Erro: ${e.message} em ${e.filename}:${e.lineno}`;
-                }
+                const msg = String(e && (e.message||'')).toLowerCase();
+                const ignore = msg.includes("cannot set properties of null (setting 'innerhtml')") || msg.includes('failed to fetch');
+                if (dbg && !ignore) { dbg.style.display = 'block'; dbg.textContent = `Erro: ${e.message} em ${e.filename}:${e.lineno}`; }
                 console.error('GlobalError', e.filename, e.lineno, e.message);
             } catch(_) {}
         });
@@ -47,10 +48,9 @@
                 const reason = e && e.reason;
                 const msg = (reason && (reason.message || reason.toString())) || 'Promise rejection';
                 const dbg = document.getElementById('debug-info');
-                if (dbg) {
-                    dbg.style.display = 'block';
-                    dbg.textContent = `Erro de Promise: ${msg}`;
-                }
+                const m = String(msg||'').toLowerCase();
+                const ignore = m.includes("cannot set properties of null (setting 'innerhtml')") || m.includes('failed to fetch');
+                if (dbg && !ignore) { dbg.style.display = 'block'; dbg.textContent = `Erro de Promise: ${msg}`; }
                 console.error('UnhandledRejection', msg);
             } catch(_) {}
         });
@@ -73,6 +73,83 @@
             --marrom: #8B4513; /* NOVA COR: Em Atendimento */
             --preto: #000000; /* NOVA COR: Cancelado */
         }
+
+        /* Tema: Natal */
+        :root.theme-christmas {
+            --primary-color: #D32F2F;
+            --primary-dark: #A31616;
+            --white: #ffffff;
+        }
+        .theme-christmas .logo-container { position: relative; }
+        .logo-container { display: inline-block; }
+        .theme-christmas .logo-container::before, .theme-christmas .logo-container::after { display: none; }
+        .santa-icon { position: absolute; top: -6px; right: -12px; font-size: 28px; animation: hatTilt 1.5s ease-in-out infinite; }
+        .santa-walk { display:inline-block; font-size:20px; animation: santaWalk 2.2s ease-in-out infinite; }
+        @keyframes santaWalk { 0% { transform: translateX(0); } 50% { transform: translateX(10px);} 100% { transform: translateX(0);} }
+        .theme-christmas .logo {
+            position: relative;
+        }
+        .theme-christmas .logo-container::after {
+            content: "";
+            position: absolute;
+            top: -8px;
+            right: -18px;
+            width: 0;
+            height: 0;
+            border-left: 18px solid transparent;
+            border-right: 18px solid transparent;
+            border-bottom: 28px solid #D32F2F;
+            transform: rotate(-18deg);
+            animation: hatTilt 1.5s ease-in-out infinite;
+        }
+        .theme-christmas .logo-container::before {
+            content: "";
+            position: absolute;
+            top: 6px;
+            right: -10px;
+            width: 56px;
+            height: 14px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+            transform: rotate(-16deg);
+        }
+        .theme-christmas .logo-container .hat-pompom {
+            position: absolute;
+            top: 16px;
+            right: -8px;
+            width: 12px;
+            height: 12px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 6px rgba(255,255,255,0.8);
+            animation: hatTilt 1.5s ease-in-out infinite;
+        }
+        @keyframes hatTilt { 0% { transform: rotate(-16deg); } 50% { transform: rotate(-22deg); } 100% { transform: rotate(-16deg); } }
+
+        /* Neve */
+        #snow-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 999; }
+        .snowflake { position: absolute; color: #fff; opacity: 0.9; font-size: 12px; animation: snowFall linear infinite; }
+        @keyframes snowFall { 0% { transform: translateY(-10vh); opacity: 0; } 10% { opacity: 0.9; } 100% { transform: translateY(100vh); opacity: 0; } }
+        #confetti-overlay, #hearts-overlay, #lantern-overlay, #fireworks-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 999; }
+        #arrowhearts-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 999; }
+        .confetti-piece { position: absolute; width: 8px; height: 14px; opacity: 0.9; animation: confettiFall linear infinite; }
+        @keyframes confettiFall { 0% { transform: translateY(-10vh) rotate(0deg); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateY(100vh) rotate(360deg); opacity: 0; } }
+        .heart { position: absolute; color: #e91e63; opacity: 0.9; animation: heartsFloat linear infinite; }
+        @keyframes heartsFloat { 0% { transform: translateY(10vh) scale(0.8); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-100vh) scale(1.2); opacity: 0; } }
+        .lantern { position: absolute; width: 10px; height: 16px; background: #ffeb3b; border-radius: 3px; box-shadow: 0 0 8px rgba(255,235,59,0.8); animation: lanternFloat linear infinite; }
+        @keyframes lanternFloat { 0% { transform: translateY(10vh); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateY(-100vh); opacity: 0; } }
+        .firework { position: absolute; width: 6px; height: 6px; border-radius: 50%; animation: fireworksFall linear infinite; opacity: 0.95; box-shadow: 0 0 10px rgba(255,255,255,0.9); }
+        @keyframes fireworksFall { 0% { transform: translateY(-10vh) scale(0.9); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateY(100vh) scale(1); opacity: 0; } }
+        .arrow-heart { position: absolute; color: #e91e63; opacity: 0.95; font-size: 16px; animation: arrowFly linear infinite; }
+        @keyframes arrowFly { 0% { transform: translate(-10vw, 90vh) rotate(-10deg); opacity: 0; } 10% { opacity: 1; } 100% { transform: translate(110vw, -10vh) rotate(-10deg); opacity: 0; } }
+
+        :root.theme-newyear { --primary-color: #D84315; }
+        :root.theme-carnival { --primary-color: #6f42c1; }
+        :root.theme-valentines { --primary-color: #e91e63; }
+        :root.theme-mothers { --primary-color: #ff4081; }
+        :root.theme-fathers { --primary-color: #1976d2; }
+        :root.theme-saojoao { --primary-color: #388e3c; }
         
         * {
             margin: 0;
@@ -107,12 +184,8 @@
             margin-bottom: 20px;
         }
         
-        .header-content {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 20px;
-        }
+        .header-content { display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
+        .right-info { display: flex; align-items: center; gap: 12px; }
         
         .logo-container {
             display: flex;
@@ -172,25 +245,38 @@
         .tabs {
             display: flex;
             background-color: var(--primary-color);
+            justify-content: center;
+            gap: 18px;
+            flex-wrap: nowrap;
         }
         
         .tab {
-            padding: 15px 25px;
+            padding: 12px 18px;
             cursor: pointer;
             color: var(--white);
             font-weight: 600;
-            transition: all 0.3s ease;
+            transition: all 0.25s ease;
             border-bottom: 3px solid transparent;
+            text-align: center;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 120px;
         }
         
         .tab:hover {
             background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
         }
         
         .tab.active {
             background-color: var(--white);
             color: var(--primary-color);
             border-bottom: 3px solid var(--primary-color);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transform: none;
         }
         
         .tab-content {
@@ -351,13 +437,14 @@
         .totals-container {
             display: flex;
             justify-content: space-between;
+            gap: 12px;
             margin-bottom: 15px;
-            padding: 15px;
-            background-color: var(--white);
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 16px;
+            background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 40%, #f0f0f0 100%);
+            border-radius: 12px;
+            box-shadow: 0 10px 28px rgba(0,0,0,0.12);
             position: relative;
-            align-items: center;
+            align-items: stretch;
         }
         /* Wrapper à direita para agrupar total geral e indicador */
         .totals-right {
@@ -367,11 +454,31 @@
         }
         
         .total-item {
-            text-align: center;
+            display: grid;
+            grid-template-columns: 56px 1fr;
+            grid-template-rows: auto auto;
+            align-items: center;
+            column-gap: 12px;
             flex: 1;
-            padding: 10px;
-            border-right: 1px solid #eee;
+            padding: 14px 12px 12px 12px;
+            border-right: 1px solid #e5e5e5;
+            border-radius: 10px;
+            background: linear-gradient(135deg, rgba(252,176,38,0.12), rgba(252,176,38,0.06));
+            position: relative;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
+        .total-item::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 6px;
+            border-radius: 10px 0 0 10px;
+            background: linear-gradient(180deg, var(--primary-color), var(--primary-dark));
+            box-shadow: 0 0 8px rgba(252,176,38,0.35);
+        }
+        .total-item:hover { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(0,0,0,0.14); }
         
         .total-item:last-child {
             border-right: none;
@@ -381,12 +488,27 @@
             font-size: 24px;
             font-weight: bold;
             color: var(--primary-color);
-            margin-bottom: 5px;
+            margin-bottom: 6px;
+            text-align: left;
+            grid-column: 2;
         }
+        .total-icon {
+            font-size: 30px;
+            margin: 0;
+            display: inline-block;
+            animation: iconPulse 1.5s ease-in-out infinite;
+            grid-row: 1 / span 2;
+            grid-column: 1;
+            align-self: center;
+            justify-self: center;
+        }
+        @keyframes iconPulse { 0% { transform: scale(1); } 50% { transform: scale(1.12) rotate(2deg); } 100% { transform: scale(1); } }
         
         .total-label {
             font-size: 14px;
             color: var(--medium-gray);
+            text-align: left;
+            grid-column: 2;
         }
         
         .total-geral-os {
@@ -1690,7 +1812,9 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             display: flex;
             flex-direction: column;
+            position: relative;
         }
+        
         
         .dashboard-card.wide {
             grid-column: span 2;
@@ -1744,13 +1868,33 @@
             border-radius: 8px;
             text-align: center;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            position: relative;
         }
+        .dashboard-total-card::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 6px;
+            border-radius: 8px 0 0 8px;
+            background: linear-gradient(180deg, var(--primary-color), var(--primary-dark));
+            box-shadow: 0 0 8px rgba(252,176,38,0.35);
+        }
+        .dashboard-total-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
+        .dashboard-total-icon { font-size: 22px; margin-bottom: 6px; }
+        .dashboard-total-icon { animation: dashIconPulse 1.5s ease-in-out infinite; display:inline-block; }
+        @keyframes dashIconPulse { 0% { transform: scale(1); } 50% { transform: scale(1.12) rotate(2deg); } 100% { transform: scale(1); } }
         
         .dashboard-total-value {
             font-size: 28px;
             font-weight: bold;
             margin-bottom: 5px;
+            display: inline-block;
         }
+        .pulse { animation: pulse 0.6s ease; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.06); } 100% { transform: scale(1); } }
         
         .dashboard-total-label {
             font-size: 14px;
@@ -1944,7 +2088,7 @@
     <div id="auth-overlay" class="auth-overlay"></div>
     <div id="auth-card" class="auth-card">
       <div class="card">
-        <img src="Nova pasta/Imagem5.png" alt="Logo" class="logo" />
+        <div class="logo-container"><img src="Nova pasta/Imagem5.png" alt="Logo" class="logo" /><span class="hat-pompom"></span></div>
         <h1>NORMAQ</h1>
         <p style="font-size:12px;color:#555;margin-bottom:8px;">Autenticação Requerida</p>
 
@@ -2275,15 +2419,18 @@
             <div class="logo-container">
                 <img src="./Nova pasta/Imagem5.png" alt="Logo" class="logo">
                 <div>
-                    <h1 class="header-title">Controle de OS Abertas</h1>
+                    <h1 class="header-title">Controle de OS Abertas <span id="theme-title-extra" class="theme-extra"></span></h1>
                     <p class="header-subtitle">Sistema de gerenciamento de Ordens de Serviço</p>
                 </div>
             </div>
-            <div class="user-info-container" id="user-info-container" style="margin-left: 20px; padding: 8px 16px; background: rgba(255,255,255,0.1); border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; gap: 12px;">
+            <div class="right-info">
+                <div id="theme-banner" class="theme-banner"> </div>
+                <div class="user-info-container" id="user-info-container" style="margin-left: 0; padding: 8px 16px; background: rgba(255,255,255,0.1); border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; gap: 12px;">
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <span class="user-welcome" style="color: white; font-size: 14px;">Olá,</span>
                     <span class="user-name" id="user-name" style="color: white; font-weight: 600; font-size: 14px;">Usuário</span>
                 </div>
+            </div>
                 <span style="color: rgba(255,255,255,0.5); font-size: 14px;">|</span>
                 <div class="datetime-container" style="display: flex; flex-direction: column; align-items: flex-start; line-height: 1;">
                     <div class="current-time" id="current-time" style="font-size: 12px; color: rgba(255,255,255,0.9); margin: 0;">14:13</div>
@@ -2343,18 +2490,25 @@
                 <!-- Totais para OS Externa - CORRIGIDO -->
                 <div class="totals-container" id="totals-externa">
                     <div class="total-item">
+                        <div class="total-icon">🧩</div>
                         <div class="total-value" id="total-pecas-externa">R$ 0,00</div>
                         <div class="total-label">Total Peças</div>
                     </div>
                     <div class="total-item">
+                        <div class="total-icon">🔧</div>
                         <div class="total-value" id="total-servico-externa">R$ 0,00</div>
                         <div class="total-label">Total Serviço</div>
                     </div>
                     <div class="total-item">
+                        <div class="total-icon">📄</div>
                         <div class="total-value" id="total-os-externa">R$ 0,00</div>
                         <div class="total-label">Total OS</div>
                     </div>
-                    <div class="total-geral-os" id="total-geral-externa">Total Geral de OS: 0</div>
+                    <div class="total-item">
+                        <div class="total-icon">📊</div>
+                        <div class="total-value" id="total-geral-externa">0</div>
+                        <div class="total-label">Total Geral de OS</div>
+                    </div>
                 </div>
                 
                 <div class="table-controls">
@@ -2416,18 +2570,25 @@
                 <!-- Totais para OS Interna - CORRIGIDO -->
                 <div class="totals-container" id="totals-interna">
                     <div class="total-item">
+                        <div class="total-icon">🧩</div>
                         <div class="total-value" id="total-pecas-interna">R$ 0,00</div>
                         <div class="total-label">Total Peças</div>
                     </div>
                     <div class="total-item">
+                        <div class="total-icon">🔧</div>
                         <div class="total-value" id="total-servico-interna">R$ 0,00</div>
                         <div class="total-label">Total Serviço</div>
                     </div>
                     <div class="total-item">
+                        <div class="total-icon">📄</div>
                         <div class="total-value" id="total-os-interna">R$ 0,00</div>
                         <div class="total-label">Total OS</div>
                     </div>
-                    <div class="total-geral-os" id="total-geral-interna">Total Geral de OS: 0</div>
+                    <div class="total-item">
+                        <div class="total-icon">📊</div>
+                        <div class="total-value" id="total-geral-interna">0</div>
+                        <div class="total-label">Total Geral de OS</div>
+                    </div>
                 </div>
                 
                 <div class="table-controls">
@@ -2489,18 +2650,25 @@
                 <!-- Totais para OS Garantia - CORRIGIDO -->
                 <div class="totals-container" id="totals-garantia">
                     <div class="total-item">
+                        <div class="total-icon">🧩</div>
                         <div class="total-value" id="total-pecas-garantia">R$ 0,00</div>
                         <div class="total-label">Total Peças</div>
                     </div>
                     <div class="total-item">
+                        <div class="total-icon">🔧</div>
                         <div class="total-value" id="total-servico-garantia">R$ 0,00</div>
                         <div class="total-label">Total Serviço</div>
                     </div>
                     <div class="total-item">
+                        <div class="total-icon">📄</div>
                         <div class="total-value" id="total-os-garantia">R$ 0,00</div>
                         <div class="total-label">Total OS</div>
                     </div>
-                    <div class="total-geral-os" id="total-geral-garantia">Total Geral de OS: 0</div>
+                    <div class="total-item">
+                        <div class="total-icon">📊</div>
+                        <div class="total-value" id="total-geral-garantia">0</div>
+                        <div class="total-label">Total Geral de OS</div>
+                    </div>
                 </div>
                 
                 <div class="table-controls">
@@ -2835,25 +3003,29 @@
                         </select>
                     </div>
                     <div class="filter-group">
-                        <button class="btn btn-primary" id="btn-aplicar-filtros-dashboard" style="margin-top: 25px;">Aplicar Filtros</button>
+                        <button class="btn btn-primary" id="btn-aplicar-filtros-dashboard" style="margin-top: 25px;">Limpar Filtros</button>
                     </div>
                 </div>
 
                 <!-- Totais do Dashboard - NOVA POSIÇÃO -->
                 <div class="dashboard-totals-grid">
                     <div class="dashboard-total-card">
+                        <div class="dashboard-total-icon">🧩</div>
                         <div class="dashboard-total-value" id="dashboard-total-pecas">R$ 0,00</div>
                         <div class="dashboard-total-label">Total Peças</div>
                     </div>
                     <div class="dashboard-total-card">
+                        <div class="dashboard-total-icon">🛠️</div>
                         <div class="dashboard-total-value" id="dashboard-total-servico">R$ 0,00</div>
                         <div class="dashboard-total-label">Total Serviço</div>
                     </div>
                     <div class="dashboard-total-card">
+                        <div class="dashboard-total-icon">📄</div>
                         <div class="dashboard-total-value" id="dashboard-total-os">R$ 0,00</div>
                         <div class="dashboard-total-label">Total OS</div>
                     </div>
                     <div class="dashboard-total-card">
+                        <div class="dashboard-total-icon">📊</div>
                         <div class="dashboard-total-value" id="dashboard-total-geral">0</div>
                         <div class="dashboard-total-label">Total Geral de OS</div>
                     </div>
@@ -2903,6 +3075,12 @@
                         <h3>🔧 OS por Tipo</h3>
                         <div class="dashboard-chart">
                             <canvas id="chart-os-tipo"></canvas>
+                        </div>
+                    </div>
+                    <div class="dashboard-card wide">
+                        <h3>📅 OS por Mês (Emissão)</h3>
+                        <div class="dashboard-chart">
+                            <canvas id="chart-os-mes"></canvas>
                         </div>
                     </div>
                     <!-- NOVO GRÁFICO: Valores por Tipo de OS -->
@@ -3087,6 +3265,7 @@
                     <div class="tab active" data-tab="usuarios-cadastro">Cadastro</div>
                     <div class="tab" data-tab="usuarios-mostrar-os">Mostrar OS</div>
                     <div class="tab" data-tab="usuarios-escalonamento">Lógica de Escalonamento</div>
+                    <div class="tab" data-tab="usuarios-tema">Altera Tema</div>
                 </div>
 
                 <div class="tab-content active" id="usuarios-cadastro">
@@ -3150,6 +3329,29 @@
                 <div class="tab-content" id="usuarios-escalonamento">
                     <div id="usuarios-escalonamento-content" class="filters" style="display:block; background:#fff; padding:24px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
                         <!-- preenchido via JS -->
+                    </div>
+                </div>
+
+                <div class="tab-content" id="usuarios-tema">
+                    <div class="filters" style="display:block; background:#fff; padding:24px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+                        <h3 style="margin:0 0 12px 0">Altera Tema</h3>
+                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                            <select id="tema-select" class="filter-select" style="max-width:200px;">
+                                <option value="automatico">Automático</option>
+                                <option value="padrao">Padrão</option>
+                                <option value="natal">Natal</option>
+                                <option value="anonovo">Ano Novo</option>
+                                <option value="pais">Dia dos Pais</option>
+                                <option value="maes">Dia das Mães</option>
+                                <option value="namorados">Dia dos Namorados</option>
+                                <option value="carnaval">Carnaval</option>
+                                <option value="saojoao">São João</option>
+                            </select>
+                            <button class="btn btn-success" id="btn-aplicar-tema">Aplicar Tema</button>
+                            <button class="btn" id="btn-tema-padrao">Voltar ao Padrão</button>
+                            <span id="tema-feedback" style="margin-left:8px; font-weight:600;"></span>
+                        </div>
+                        <div style="margin-top:12px; font-size:12px; color:#666;">O tema escolhido será aplicado no painel e na tela de login.</div>
                     </div>
                 </div>
             </div>
@@ -4537,9 +4739,7 @@
             
             countEl.textContent = `${data.length} OS encontradas`;
             const totalGeralEl = document.getElementById(`total-geral-${tab}`);
-            if (totalGeralEl) {
-                totalGeralEl.textContent = `Total Geral de OS: ${data.length}`;
-            }
+            if (totalGeralEl) totalGeralEl.textContent = String(data.length);
             
             document.querySelectorAll('.observacao-text, .acao-atualizacao-text').forEach(el => {
                 el.addEventListener('click', e => {
@@ -5000,9 +5200,10 @@
                         this.classList.add('active');
                         const target = container.querySelector(`#${tabId}`);
                         if (target) target.classList.add('active');
-                        if (tabId === 'usuarios-mostrar-os') initializeMostrarOSTab();
-                        if (tabId === 'usuarios-escalonamento') renderEscConfigList();
-                        return;
+                    if (tabId === 'usuarios-mostrar-os') initializeMostrarOSTab();
+                    if (tabId === 'usuarios-escalonamento') renderEscConfigList();
+                    if (tabId === 'usuarios-tema') renderTemaTab();
+                    return;
                     }
 
                     // Tabs principais
@@ -5119,8 +5320,11 @@
             const btnImport = document.getElementById('btn-importar-alertas');
             if (btnImport) btnImport.addEventListener('click', importLocalToSupabase);
             
-            // Event listener para o botão de aplicar filtros do dashboard
-            document.getElementById('btn-aplicar-filtros-dashboard').addEventListener('click', loadDashboardData);
+            document.getElementById('btn-aplicar-filtros-dashboard').addEventListener('click', clearDashboardFilters);
+            ['dashboard-filter-revenda','dashboard-filter-situacao','dashboard-filter-status','dashboard-filter-escalonamento','dashboard-filter-tipo'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('change', loadDashboardData);
+            });
             
             // Event listener para o filtro de valores no dashboard
             document.getElementById('valor-filter-select').addEventListener('change', function() {
@@ -5351,6 +5555,8 @@
             }
         }
 
+        
+
         // --- LÓGICA PRINCIPAL ---
         
         // Estado do controle de colunas
@@ -5400,6 +5606,233 @@
                     });
                 }
             });
+        }
+
+        function renderTemaTab(){
+            const sel = document.getElementById('tema-select');
+            const btnApply = document.getElementById('btn-aplicar-tema');
+            const btnDefault = document.getElementById('btn-tema-padrao');
+            const feedback = document.getElementById('tema-feedback');
+            if (!sel || !btnApply || !btnDefault || !feedback) return;
+            const saved = (localStorage.getItem('appTheme')||'padrao');
+            sel.value = saved;
+            btnApply.onclick = async () => { applyTheme(sel.value); await saveGlobalTheme(sel.value); feedback.textContent = 'Tema aplicado.'; };
+            btnDefault.onclick = () => { applyTheme('padrao'); feedback.textContent = 'Tema padrão aplicado.'; };
+        }
+
+        function resolveAutoTheme(d){
+            const date = d || new Date();
+            const m = date.getMonth()+1;
+            const day = date.getDate();
+            if (m === 12) return 'natal';
+            if (m === 1 && day <= 7) return 'anonovo';
+            if (m === 2) return 'carnaval';
+            if (m === 5) return 'maes';
+            if (m === 6 && day === 12) return 'namorados';
+            if (m === 6 && day >= 20) return 'saojoao';
+            if (m === 8) return 'pais';
+            return 'padrao';
+        }
+
+        function applyTheme(key){
+            const chosen = (key === 'automatico') ? resolveAutoTheme() : key;
+            try { localStorage.setItem('appTheme', key); } catch(_) {}
+            document.documentElement.classList.remove('theme-christmas','theme-newyear','theme-carnival','theme-valentines','theme-mothers','theme-fathers','theme-saojoao');
+            removeThemeOverlays();
+            if (chosen === 'natal') { document.documentElement.classList.add('theme-christmas'); addSnow(); }
+            else if (chosen === 'anonovo') { document.documentElement.classList.add('theme-newyear'); addFireworks(); }
+            else if (chosen === 'carnaval') { document.documentElement.classList.add('theme-carnival'); addConfetti(true); }
+            else if (chosen === 'namorados') { document.documentElement.classList.add('theme-valentines'); addArrowHearts(); }
+            else if (chosen === 'maes') { document.documentElement.classList.add('theme-mothers'); addHearts(); }
+            else if (chosen === 'pais') { document.documentElement.classList.add('theme-fathers'); addConfetti(false); }
+            else if (chosen === 'saojoao') { document.documentElement.classList.add('theme-saojoao'); addLanterns(); }
+            setThemeBadge(chosen);
+            setHeaderExtras(chosen);
+            setSantaIcon(chosen === 'natal');
+        }
+
+        function removeThemeOverlays(){
+            ['snow-overlay','confetti-overlay','hearts-overlay','lantern-overlay','fireworks-overlay','arrowhearts-overlay'].forEach(id=>{
+                const el = document.getElementById(id);
+                if (el && el.parentNode) el.parentNode.removeChild(el);
+            });
+        }
+
+        function addSnow(){
+            let overlay = document.getElementById('snow-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div'); overlay.id = 'snow-overlay'; document.body.appendChild(overlay);
+                for (let i=0;i<80;i++){
+                    const s = document.createElement('span'); s.className = 'snowflake'; s.textContent = '❄';
+                    s.style.left = Math.floor(Math.random()*100) + 'vw';
+                    s.style.animationDuration = (6 + Math.random()*6) + 's';
+                    s.style.animationDelay = (Math.random()*5) + 's';
+                    s.style.fontSize = (10 + Math.random()*12) + 'px';
+                    overlay.appendChild(s);
+                }
+            }
+        }
+        function addConfetti(rainbow){
+            let overlay = document.getElementById('confetti-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div'); overlay.id='confetti-overlay'; document.body.appendChild(overlay);
+                const colors = rainbow ? ['#FCB026','#e91e63','#6f42c1','#17a2b8','#28a745','#fd7e14','#dc3545'] : ['#FCB026','#1976d2','#6c757d'];
+                for (let i=0;i<120;i++){
+                    const c = document.createElement('span'); c.className='confetti-piece';
+                    c.style.left = Math.floor(Math.random()*100)+'vw';
+                    c.style.background = colors[Math.floor(Math.random()*colors.length)];
+                    c.style.animationDuration = (4+Math.random()*6)+'s';
+                    c.style.animationDelay = (Math.random()*4)+'s';
+                    overlay.appendChild(c);
+                }
+            }
+        }
+        function addHearts(){
+            let overlay = document.getElementById('hearts-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div'); overlay.id='hearts-overlay'; document.body.appendChild(overlay);
+                for (let i=0;i<80;i++){
+                    const h = document.createElement('span'); h.className='heart'; h.textContent='❤';
+                    h.style.left = Math.floor(Math.random()*100)+'vw';
+                    h.style.fontSize = (12 + Math.random()*18)+'px';
+                    h.style.animationDuration = (6+Math.random()*6)+'s';
+                    h.style.animationDelay = (Math.random()*4)+'s';
+                    overlay.appendChild(h);
+                }
+            }
+        }
+        function addArrowHearts(){
+            let overlay = document.getElementById('arrowhearts-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div'); overlay.id='arrowhearts-overlay'; document.body.appendChild(overlay);
+                for (let i=0;i<50;i++){
+                    const a = document.createElement('span'); a.className='arrow-heart'; a.textContent='➶❤';
+                    a.style.left = Math.floor(Math.random()*100)+'vw';
+                    a.style.animationDuration = (6+Math.random()*6)+'s';
+                    a.style.animationDelay = (Math.random()*4)+'s';
+                    a.style.fontSize = (14 + Math.random()*12)+'px';
+                    overlay.appendChild(a);
+                }
+            }
+        }
+        function addLanterns(){
+            let overlay = document.getElementById('lantern-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div'); overlay.id='lantern-overlay'; document.body.appendChild(overlay);
+                for (let i=0;i<50;i++){
+                    const l = document.createElement('span'); l.className='lantern';
+                    l.style.left = Math.floor(Math.random()*100)+'vw';
+                    l.style.animationDuration = (8+Math.random()*6)+'s';
+                    l.style.animationDelay = (Math.random()*5)+'s';
+                    overlay.appendChild(l);
+                }
+            }
+        }
+        function addFireworks(){
+            let overlay = document.getElementById('fireworks-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div'); overlay.id='fireworks-overlay'; document.body.appendChild(overlay);
+                const colors = ['#ffd54f','#ff5252','#40c4ff','#69f0ae','#7c4dff'];
+                for (let i=0;i<120;i++){
+                    const f = document.createElement('span'); f.className='firework';
+                    const color = colors[Math.floor(Math.random()*colors.length)];
+                    f.style.left = Math.floor(Math.random()*100)+'vw';
+                    f.style.animationDuration = (4+Math.random()*4)+'s';
+                    f.style.animationDelay = (Math.random()*3)+'s';
+                    f.style.background = color;
+                    f.style.boxShadow = '0 0 10px '+color+', 0 0 14px '+color;
+                    overlay.appendChild(f);
+                }
+            }
+        }
+
+        (function initThemeOnLoad(){
+            const saved = (localStorage.getItem('appTheme')||'padrao');
+            applyTheme(saved);
+            const chosen = (saved === 'automatico') ? resolveAutoTheme() : saved;
+            setThemeBadge(chosen);
+            setHeaderExtras(chosen);
+            setSantaIcon(chosen === 'natal');
+            refreshGlobalTheme();
+        })();
+
+        async function refreshGlobalTheme(){
+            try {
+                const t = await fetchGlobalTheme();
+                if (t) applyTheme(t);
+            } catch(_) {}
+        }
+
+        async function saveGlobalTheme(theme){
+            try {
+                if (!canUseSupabase()) { localStorage.setItem('globalThemeShadow', theme); return 'local'; }
+                const now = new Date().toISOString();
+                const tables = [
+                    { name: 'global_settings', key: 'key', val: 'value', ts: 'updated_at' },
+                    { name: 'configuracoes_globais', key: 'chave', val: 'valor', ts: 'atualizado_em' },
+                    { name: 'configurações_globais', key: 'chave', val: 'valor', ts: 'atualizado_em' }
+                ];
+                for (const t of tables) {
+                    try { await supabase.from(t.name).upsert({ [t.key]: 'global_theme', [t.val]: theme, [t.ts]: now }); return 'server'; } catch(_) {}
+                }
+                localStorage.setItem('globalThemeShadow', theme);
+                return 'local';
+            } catch(e) { try { localStorage.setItem('globalThemeShadow', theme); } catch(_) {} return 'local'; }
+        }
+        async function fetchGlobalTheme(){
+            try {
+                if (!canUseSupabase()) { return localStorage.getItem('globalThemeShadow') || null; }
+                const tables = [
+                    { name: 'global_settings', key: 'key', val: 'value' },
+                    { name: 'configuracoes_globais', key: 'chave', val: 'valor' },
+                    { name: 'configurações_globais', key: 'chave', val: 'valor' }
+                ];
+                for (const t of tables) {
+                    try {
+                        const { data, error } = await supabase.from(t.name).select(t.val).eq(t.key,'global_theme').limit(1);
+                        if (!error && data && data[0] && data[0][t.val]) return data[0][t.val];
+                    } catch(_) {}
+                }
+                return localStorage.getItem('globalThemeShadow') || null;
+            } catch(e) { return localStorage.getItem('globalThemeShadow') || null; }
+        }
+
+        function setThemeBadge(theme){
+            const banner = document.getElementById('theme-banner');
+            if (!banner) return;
+            const map = {
+                natal: '🎄 Feliz Natal',
+                anonovo: '🎆 Feliz Ano Novo',
+                carnaval: '🎭 Bom Carnaval',
+                namorados: '💘 Feliz Dia dos Namorados',
+                maes: '💐 Feliz Dia das Mães',
+                pais: '👨‍👧 Feliz Dia dos Pais',
+                saojoao: '🔥 Viva São João'
+            };
+            const text = map[theme] || '';
+            banner.textContent = text;
+            banner.style.display = text ? 'inline-block' : 'none';
+            banner.style.fontSize = '20px';
+        }
+        function setHeaderExtras(theme){
+            const ex = document.getElementById('theme-title-extra');
+            if (!ex) return;
+            if (theme === 'natal') ex.innerHTML = '<span class="santa-walk">🎅</span>';
+            else if (theme === 'saojoao') ex.innerHTML = '<span class="bonfire">🔥</span>';
+            else if (theme === 'carnaval') ex.textContent = '🐓';
+            else if (theme === 'anonovo') ex.textContent = '🎆';
+            else if (theme === 'namorados') ex.textContent = '💘';
+            else ex.textContent = '';
+        }
+        function setSantaIcon(show){
+            const lc = document.querySelector('.logo-container');
+            if (!lc) return;
+            let santa = lc.querySelector('.santa-icon');
+            if (show) {
+                if (!santa) { santa = document.createElement('span'); santa.className='santa-icon'; santa.textContent='🎅'; lc.appendChild(santa); }
+            } else {
+                if (santa) santa.remove();
+            }
         }
         
         // Inicializa a visibilidade das colunas ao carregar
@@ -7770,18 +8203,20 @@
                 if (error) throw error;
                 const bcryptLib = (window.bcrypt || (window.dcodeIO && window.dcodeIO.bcrypt));
                 const rows = data || [];
+                const inativosLocal = (function(){ try { return JSON.parse(localStorage.getItem('usuariosInativos')||'[]'); } catch(_) { return []; } })();
                 usuariosCache = rows.map(u => {
                     const pass = (u.senha || '').trim();
                     let first = false;
                     try {
                         if (pass.startsWith('$2a$') || pass.startsWith('$2b$') || pass.startsWith('$2y$')) {
-                            first = bcryptLib ? bcryptLib.compareSync(DEFAULT_FIRST_PASSWORD, pass) : false;
+                            first = bcryptLib ? bcryptLib.compareSync((window.DEFAULT_FIRST_PASSWORD||'NMQ@123'), pass) : false;
                         } else {
-                            first = (pass === DEFAULT_FIRST_PASSWORD);
+                            first = (pass === (window.DEFAULT_FIRST_PASSWORD||'NMQ@123'));
                         }
                     } catch(_) { first = false; }
                     const { senha, ...rest } = u; // não manter a senha no cache
-                    return { ...rest, primeiro_login: first };
+                    const inativoByLocal = Array.isArray(inativosLocal) && (inativosLocal.includes(rest.id) || inativosLocal.includes(rest.usuario));
+                    return { ...rest, primeiro_login: first, ativo: inativoByLocal ? false : true };
                 });
                 if (!usuariosCache || usuariosCache.length === 0) {
                     // Fallback: exibe o usuário administrador conhecido quando não há dados
@@ -7814,6 +8249,7 @@
                     <td style="padding:8px;">${u.primeiro_login ? 'Sim' : 'Não'}</td>
                     <td style="padding:8px; display:flex; gap:8px;">
                         <button class="btn btn-warning" onclick="editarUsuario(${u.id})">✏️ Editar</button>
+                        <button class="btn ${u.ativo === false ? 'btn-success' : ''}" onclick="toggleUsuarioAtivo(${u.id})">${u.ativo === false ? 'Ativar' : 'Desativar'}</button>
                         <button class="btn btn-danger" onclick="excluirUsuario(${u.id})">🗑️ Excluir</button>
                         ${isAdminView ? `<button class="btn" onclick="resetarSenhaPadrao(${u.id})">🔄 Resetar Senha</button>` : ''}
                     </td>
@@ -7913,7 +8349,7 @@
                 const bcryptLib = (window.bcrypt || (window.dcodeIO && window.dcodeIO.bcrypt));
                 if (!bcryptLib) { alert('Biblioteca de criptografia não carregada.'); return; }
                 const salt = bcryptLib.genSaltSync(10);
-                const senhaHash = bcryptLib.hashSync(DEFAULT_FIRST_PASSWORD, salt);
+                const senhaHash = bcryptLib.hashSync((window.DEFAULT_FIRST_PASSWORD||'NMQ@123'), salt);
                 const { error } = await supabase
                     .from('usuarios_auth')
                     .update({ senha: senhaHash })
@@ -7924,6 +8360,41 @@
             } catch (err) {
                 console.error('Erro ao resetar senha:', err);
                 alert('Falha ao resetar senha: ' + (err?.message || 'Erro desconhecido'));
+            }
+        }
+
+        async function toggleUsuarioAtivo(id) {
+            try {
+                const u = (usuariosCache || []).find(x => x.id === id);
+                if (!u) { alert('Usuário não encontrado.'); return; }
+                const novoEstado = !Boolean(u.ativo);
+                try {
+                    const { error } = await supabase
+                        .from('usuarios_auth')
+                        .update({ ativo: novoEstado })
+                        .eq('id', id);
+                    if (error) throw error;
+                } catch (e) {
+                    const key = 'usuariosInativos';
+                    const list = (function(){ try { return JSON.parse(localStorage.getItem(key)||'[]'); } catch(_) { return []; } })();
+                    const normalized = Array.isArray(list) ? list.slice() : [];
+                    if (!novoEstado) {
+                        if (!normalized.includes(id)) normalized.push(id);
+                        if (!normalized.includes(u.usuario)) normalized.push(u.usuario);
+                    } else {
+                        const rm = (val) => {
+                            const i = normalized.indexOf(val);
+                            if (i >= 0) normalized.splice(i, 1);
+                        };
+                        rm(id); rm(u.usuario);
+                    }
+                    try { localStorage.setItem(key, JSON.stringify(normalized)); } catch(_) {}
+                }
+                alert(novoEstado ? 'Usuário ativado.' : 'Usuário desativado.');
+                loadUsuariosList();
+            } catch (err) {
+                console.error('Erro ao atualizar status ativo:', err);
+                alert('Falha ao atualizar status: ' + (err?.message || 'Erro desconhecido'));
             }
         }
 
@@ -10596,7 +11067,7 @@ function getEscalonamento(tab, dias, revenda) {
             if (totalOsEl) totalOsEl.textContent = formatCurrency(totalOS);
 
             const totalGeralEl = document.getElementById(`total-geral-${tab}`);
-            if (totalGeralEl) totalGeralEl.textContent = `Total Geral de OS: ${filteredData.length}`;
+            if (totalGeralEl) totalGeralEl.textContent = String(filteredData.length);
         }
         
         // --- FUNÇÕES DO DASHBOARD - ATUALIZADAS ---
@@ -10625,6 +11096,20 @@ function getEscalonamento(tab, dias, revenda) {
                 console.error('Erro ao carregar dados do dashboard:', error);
             }
         }
+        function clearDashboardFilters() {
+            const revEl = document.getElementById('dashboard-filter-revenda');
+            const sitEl = document.getElementById('dashboard-filter-situacao');
+            const staEl = document.getElementById('dashboard-filter-status');
+            const escEl = document.getElementById('dashboard-filter-escalonamento');
+            const tipoEl = document.getElementById('dashboard-filter-tipo');
+            if (revEl) revEl.value = '';
+            if (sitEl) sitEl.value = 'Aberta';
+            if (staEl) staEl.value = '';
+            if (escEl) escEl.value = '';
+            if (tipoEl) tipoEl.value = '';
+            window.dashboardMonthFilter = null;
+            loadDashboardData();
+        }
         
         function applyDashboardFilters(data) {
             const revEl = document.getElementById('dashboard-filter-revenda');
@@ -10637,6 +11122,7 @@ function getEscalonamento(tab, dias, revenda) {
             const status = staEl ? staEl.value : '';
             const escalonamento = escEl ? escEl.value : '';
             const tipo = tipoEl ? tipoEl.value : '';
+            const monthFilter = window.dashboardMonthFilter;
             
             return data.filter(os => {
                 // Filtro de revenda
@@ -10652,26 +11138,29 @@ function getEscalonamento(tab, dias, revenda) {
                 // Filtro de escalonamento
                 const diasEmAberto = calcularDiasEmAberto(os);
                 const osEscalonamento = getEscalonamento(os.Tipo?.toLowerCase() || 'externa', diasEmAberto, os.Revenda);
-                if (escalonamento) {
-                    const tipoCalc = os.Tipo?.toLowerCase() || 'externa';
-                    const revCode = getRevendaCode(String(os.Revenda)) || String(os.Revenda);
-                    const chain = getEscalonamentoChain(tipoCalc, revCode);
-                    const normChain = chain.map(normalizeNomeResponsavel);
-                    const idx = normChain.indexOf(normalizeNomeResponsavel(osEscalonamento));
-                    const prevList = idx > 0 ? chain.slice(0, idx) : [];
-                    const fNorm = normalizeNomeResponsavel(escalonamento);
-                    const matchCurrent = fNorm === normalizeNomeResponsavel(osEscalonamento);
-                    const matchPrev = prevList.some(p => fNorm === normalizeNomeResponsavel(p));
-                    if (!matchCurrent && !matchPrev) return false;
-                }
+                const escFilter = String(window.dashboardEscalonamentoOverride || escalonamento || '');
+                if (escFilter && normalizeNomeResponsavel(osEscalonamento) !== normalizeNomeResponsavel(escFilter)) return false;
                 
                 // Filtro de tipo de OS
                 if (tipo && os.Tipo !== tipo) return false;
-                
+
+                if (typeof monthFilter === 'number') {
+                    const d = parseDate(os.Emissao);
+                    if (!d || isNaN(d.getTime())) return false;
+                    if (d.getMonth() !== monthFilter) return false;
+                }
+
+                if (window.dashboardDaysRange) {
+                    const dias = calcularDiasEmAberto(os);
+                    const min = window.dashboardDaysRange.min;
+                    const max = window.dashboardDaysRange.max;
+                    if (!(dias >= min && dias <= (Number.isFinite(max) ? max : dias))) return false;
+                }
+
                 return true;
             });
         }
-        
+
         function updateDashboardTotals(data) {
             const totalPecas = data.reduce((sum, os) => sum + (parseFloat(os['Total Pecas']) || 0), 0);
             const totalServico = data.reduce((sum, os) => sum + (parseFloat(os['Total Servico']) || 0), 0);
@@ -10685,6 +11174,69 @@ function getEscalonamento(tab, dias, revenda) {
             document.getElementById('dashboard-total-servico').textContent = formatCurrency(totalServico);
             document.getElementById('dashboard-total-os').textContent = formatCurrency(totalOS);
             document.getElementById('dashboard-total-geral').textContent = data.length;
+            ['dashboard-total-pecas','dashboard-total-servico','dashboard-total-os','dashboard-total-geral'].forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.classList.remove('pulse');
+                void el.offsetWidth;
+                el.classList.add('pulse');
+            });
+        }
+
+        function abbreviateNumber(value) {
+            const abs = Math.abs(value || 0);
+            let suffix = '';
+            let div = 1;
+            if (abs >= 1e12) { suffix = 'T'; div = 1e12; }
+            else if (abs >= 1e9) { suffix = 'B'; div = 1e9; }
+            else if (abs >= 1e6) { suffix = 'M'; div = 1e6; }
+            else if (abs >= 1e3) { suffix = 'K'; div = 1e3; }
+            const num = (value / div);
+            return `${num.toFixed(2)}${suffix}`;
+        }
+
+        function getRangeFromLabel(label) {
+            const s = String(label || '').trim();
+            if (/\d+\s*-\s*\d+/.test(s)) {
+                const [a,b] = s.split('-').map(v=>parseInt(v.trim(),10));
+                return { min: a, max: b };
+            }
+            if (s.endsWith('+')) {
+                const n = parseInt(s.replace('+','').trim(),10);
+                // Para garantia 90+ começa em 91, para 30+ em 31. Se já vier 90+ consideramos n+1
+                const start = (n === 90) ? 91 : (n === 30 ? 31 : (n+1));
+                return { min: start, max: Infinity };
+            }
+            return null;
+        }
+
+        if (typeof window.dashboardEscalonamentoOverride === 'undefined') window.dashboardEscalonamentoOverride = '';
+
+        function setFilterAndReload(kind, value) {
+            if (kind === 'revenda') {
+                const code = String(revendasReverse[value] || value);
+                const el = document.getElementById('dashboard-filter-revenda');
+                if (el) el.value = (el.value === code) ? '' : code;
+            } else if (kind === 'status') {
+                const el = document.getElementById('dashboard-filter-status');
+                if (el) el.value = (el.value === value) ? '' : value;
+            } else if (kind === 'escalonamento') {
+                const el = document.getElementById('dashboard-filter-escalonamento');
+                const cur = String(window.dashboardEscalonamentoOverride || '');
+                const same = normalizeNomeResponsavel(cur) === normalizeNomeResponsavel(value);
+                window.dashboardEscalonamentoOverride = same ? '' : String(value || '');
+                if (el) el.value = '';
+            } else if (kind === 'tipo') {
+                const el = document.getElementById('dashboard-filter-tipo');
+                if (el) el.value = (el.value === value) ? '' : value;
+            } else if (kind === 'mes') {
+                window.dashboardMonthFilter = (window.dashboardMonthFilter === value) ? null : value;
+            } else if (kind === 'dias') {
+                const cur = window.dashboardDaysRange;
+                const same = cur && value && cur.min === value.min && cur.max === value.max;
+                window.dashboardDaysRange = same ? null : value;
+            }
+            loadDashboardData();
         }
         
         function generateCharts(data) {
@@ -10692,7 +11244,7 @@ function getEscalonamento(tab, dias, revenda) {
             const chartIds = [
                 'chart-os-status', 'chart-os-revenda', 
                 'chart-os-dias-garantia', 'chart-os-dias-todas', 'chart-os-escalonamento', 
-                'chart-os-tipo', 'chart-valores-tipo'
+                'chart-os-tipo', 'chart-os-mes', 'chart-valores-tipo'
             ];
             
             chartIds.forEach(chartId => {
@@ -10701,6 +11253,32 @@ function getEscalonamento(tab, dias, revenda) {
                     chartInstance.destroy();
                 }
             });
+            if (!window.__customDataLabelsRegistered) {
+                Chart.register({
+                    id: 'customDataLabels',
+                    afterDatasetsDraw(chart) {
+                        const { ctx } = chart;
+                        chart.data.datasets.forEach((dataset, i) => {
+                            const meta = chart.getDatasetMeta(i);
+                            if (!meta || meta.hidden) return;
+                            meta.data.forEach((element, index) => {
+                                const val = dataset.data[index];
+                                if (val === undefined || val === null) return;
+                                ctx.save();
+                                ctx.fillStyle = '#333';
+                                ctx.font = '12px sans-serif';
+                                const text = (chart.canvas && chart.canvas.id === 'chart-valores-tipo') ? abbreviateNumber(val) : String(val);
+                                const pos = element.tooltipPosition();
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'bottom';
+                                ctx.fillText(text, pos.x, pos.y - 4);
+                                ctx.restore();
+                            });
+                        });
+                    }
+                });
+                window.__customDataLabelsRegistered = true;
+            }
             
             // Gráfico de OS por Status - COM RÓTULOS (AGORA MAIS LARGO)
             const statusCount = {};
@@ -10722,6 +11300,15 @@ function getEscalonamento(tab, dias, revenda) {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: { padding: { top: 24 } },
+                    onClick: (evt) => {
+                        const points = statusChart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
+                        if (points.length) {
+                            const idx = points[0].index;
+                            const label = statusChart.data.labels[idx];
+                            setFilterAndReload('status', label);
+                        }
+                    },
                     plugins: {
                         legend: {
                             display: false
@@ -10737,6 +11324,7 @@ function getEscalonamento(tab, dias, revenda) {
                     scales: {
                         y: {
                             beginAtZero: true,
+                            grace: '20%',
                             title: {
                                 display: true,
                                 text: 'Quantidade de OS'
@@ -10771,6 +11359,15 @@ function getEscalonamento(tab, dias, revenda) {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: { padding: { top: 24 } },
+                    onClick: (evt) => {
+                        const points = revendaChart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
+                        if (points.length) {
+                            const idx = points[0].index;
+                            const label = revendaChart.data.labels[idx];
+                            setFilterAndReload('revenda', label);
+                        }
+                    },
                     plugins: {
                         legend: {
                             position: 'bottom'
@@ -10823,6 +11420,17 @@ function getEscalonamento(tab, dias, revenda) {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    onClick: (evt) => {
+                        const points = diasGarantiaChart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
+                        if (points.length) {
+                            const idx = points[0].index;
+                            const label = diasGarantiaChart.data.labels[idx];
+                            const range = getRangeFromLabel(label);
+                            const tipoEl = document.getElementById('dashboard-filter-tipo');
+                            if (tipoEl) tipoEl.value = (tipoEl.value === 'Garantia') ? '' : 'Garantia';
+                            setFilterAndReload('dias', range);
+                        }
+                    },
                     plugins: {
                         legend: {
                             display: false
@@ -10838,6 +11446,7 @@ function getEscalonamento(tab, dias, revenda) {
                     scales: {
                         y: {
                             beginAtZero: true,
+                            grace: '20%',
                             title: {
                                 display: true,
                                 text: 'Quantidade de OS'
@@ -10918,6 +11527,19 @@ function getEscalonamento(tab, dias, revenda) {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: { padding: { top: 24 } },
+                    onClick: (evt) => {
+                        const points = diasTodasChart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
+                        if (points.length) {
+                            const p = points[0];
+                            const labelBar = diasTodasChart.data.labels[p.index];
+                            const labelDataset = diasTodasChart.data.datasets[p.datasetIndex]?.label || '';
+                            const range = getRangeFromLabel(labelBar);
+                            const tipoEl = document.getElementById('dashboard-filter-tipo');
+                            if (labelDataset && labelDataset !== 'Todas' && tipoEl) tipoEl.value = (tipoEl.value === labelDataset) ? '' : labelDataset;
+                            setFilterAndReload('dias', range);
+                        }
+                    },
                     plugins: {
                         legend: {
                             position: 'bottom'
@@ -10933,6 +11555,7 @@ function getEscalonamento(tab, dias, revenda) {
                     scales: {
                         y: {
                             beginAtZero: true,
+                            grace: '20%',
                             title: {
                                 display: true,
                                 text: 'Quantidade de OS'
@@ -10968,6 +11591,15 @@ function getEscalonamento(tab, dias, revenda) {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: { padding: { top: 24 } },
+                    onClick: (evt) => {
+                        const points = escalonamentoChart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
+                        if (points.length) {
+                            const idx = points[0].index;
+                            const label = escalonamentoChart.data.labels[idx];
+                            setFilterAndReload('escalonamento', label);
+                        }
+                    },
                     plugins: {
                         legend: {
                             position: 'bottom'
@@ -11006,6 +11638,14 @@ function getEscalonamento(tab, dias, revenda) {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    onClick: (evt) => {
+                        const points = tipoChart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
+                        if (points.length) {
+                            const idx = points[0].index;
+                            const label = tipoChart.data.labels[idx];
+                            setFilterAndReload('tipo', label);
+                        }
+                    },
                     plugins: {
                         legend: {
                             position: 'bottom'
@@ -11022,6 +11662,35 @@ function getEscalonamento(tab, dias, revenda) {
                             }
                         }
                     }
+                }
+            });
+
+            const mesesLabels = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+            const mesesCounts = new Array(12).fill(0);
+            data.forEach(os => {
+                const d = parseDate(os.Emissao);
+                if (!d || isNaN(d.getTime())) return;
+                const m = d.getMonth();
+                mesesCounts[m]++;
+            });
+            const mesChart = new Chart(document.getElementById('chart-os-mes'), {
+                type: 'bar',
+                data: { labels: mesesLabels, datasets: [{ label: 'OS por Mês', data: mesesCounts, backgroundColor: '#fd7e14' }] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    onClick: (evt) => {
+                        const points = mesChart.getElementsAtEventForMode(evt, 'nearest', { intersect: false }, true);
+                        if (points.length) {
+                            const idx = points[0].index;
+                            setFilterAndReload('mes', idx);
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: { label: function(ctx){ return `Quantidade: ${ctx.raw}`; } } }
+                    },
+                    scales: { y: { beginAtZero: true, grace: '20%', title: { display: true, text: 'Quantidade de OS' } }, x: { title: { display: true, text: 'Mês (Emissão)' } } }
                 }
             });
 
@@ -11060,6 +11729,15 @@ function getEscalonamento(tab, dias, revenda) {
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: { padding: { top: 24 } },
+                    onClick: (evt) => {
+                        const points = valoresTipoChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+                        if (points.length) {
+                            const idx = points[0].index;
+                            const label = valoresTipoChart.data.labels[idx];
+                            setFilterAndReload('tipo', label);
+                        }
+                    },
                     plugins: {
                         legend: {
                             display: false
@@ -11068,7 +11746,7 @@ function getEscalonamento(tab, dias, revenda) {
                             callbacks: {
                                 label: function(context) {
                                     const value = context.raw || 0;
-                                    return `Valor: R$ ${value.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                                    return `Valor: ${abbreviateNumber(value)}`;
                                 }
                             }
                         }
@@ -11076,14 +11754,13 @@ function getEscalonamento(tab, dias, revenda) {
                     scales: {
                         y: {
                             beginAtZero: true,
+                            grace: '20%',
                             title: {
                                 display: true,
                                 text: 'Valor (R$)'
                             },
                             ticks: {
-                                callback: function(value) {
-                                    return 'R$ ' + value.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-                                }
+                                callback: function(value) { return abbreviateNumber(value); }
                             }
                         },
                         x: {
