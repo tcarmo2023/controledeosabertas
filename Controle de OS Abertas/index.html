@@ -131,7 +131,7 @@
         #snow-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 999; }
         .snowflake { position: absolute; color: #fff; opacity: 0.9; font-size: 12px; animation: snowFall linear infinite; }
         @keyframes snowFall { 0% { transform: translateY(-10vh); opacity: 0; } 10% { opacity: 0.9; } 100% { transform: translateY(100vh); opacity: 0; } }
-        #confetti-overlay, #hearts-overlay, #lantern-overlay, #fireworks-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 999; }
+        #confetti-overlay, #hearts-overlay, #lantern-overlay, #fireworks-overlay, #kids-overlay, #worldcup-overlay, #campaign-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 999; }
         #arrowhearts-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 999; }
         .confetti-piece { position: absolute; width: 8px; height: 14px; opacity: 0.9; animation: confettiFall linear infinite; }
         @keyframes confettiFall { 0% { transform: translateY(-10vh) rotate(0deg); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateY(100vh) rotate(360deg); opacity: 0; } }
@@ -141,8 +141,27 @@
         @keyframes lanternFloat { 0% { transform: translateY(10vh); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateY(-100vh); opacity: 0; } }
         .firework { position: absolute; width: 6px; height: 6px; border-radius: 50%; animation: fireworksFall linear infinite; opacity: 0.95; box-shadow: 0 0 10px rgba(255,255,255,0.9); }
         @keyframes fireworksFall { 0% { transform: translateY(-10vh) scale(0.9); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateY(100vh) scale(1); opacity: 0; } }
+        .fw-spark { position: absolute; width: 6px; height: 6px; border-radius: 50%; opacity: 0.95; animation: fwExplode ease-out forwards; }
+        @keyframes fwExplode { 0% { transform: translate(0, 0) scale(0.4); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(var(--tx), var(--ty)) scale(1); opacity: 0; } }
         .arrow-heart { position: absolute; color: #e91e63; opacity: 0.95; font-size: 16px; animation: arrowFly linear infinite; }
         @keyframes arrowFly { 0% { transform: translate(-10vw, 90vh) rotate(-10deg); opacity: 0; } 10% { opacity: 1; } 100% { transform: translate(110vw, -10vh) rotate(-10deg); opacity: 0; } }
+        .balloon { position: absolute; font-size: 18px; animation: balloonFloat linear infinite; }
+        @keyframes balloonFloat { 0% { transform: translateY(10vh); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateY(-100vh); opacity: 0; } }
+        .soccer { position: absolute; font-size: 16px; animation: soccerFall linear infinite; }
+        @keyframes soccerFall { 0% { transform: translateY(-10vh) rotate(0deg); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateY(100vh) rotate(360deg); opacity: 0; } }
+        .campaign-ribbon { position: absolute; width: 20px; height: 40px; animation: ribbonRise linear infinite; opacity: 0.95; }
+        .campaign-ribbon:before { content: ""; position: absolute; width: 16px; height: 16px; border: 4px solid var(--ribbon-color); border-radius: 50%; left: 2px; top: 0; }
+        .campaign-ribbon .l, .campaign-ribbon .r { position: absolute; width: 8px; height: 24px; border-radius: 8px; background: var(--ribbon-color); box-shadow: 0 0 8px var(--ribbon-color); top: 12px; left: 6px; }
+        .campaign-ribbon .l { transform: rotate(38deg); }
+        .campaign-ribbon .r { transform: rotate(-38deg); }
+        @keyframes ribbonRise { 0% { transform: translateY(100vh) scale(0.9); opacity: 0; } 10% { opacity: 1; } 100% { transform: translateY(-10vh) scale(1); opacity: 0; } }
+        .campaign-icon { font-size: 30px; line-height: 1; color: var(--ribbon-color, var(--primary-color)); text-shadow:
+            -1px 0 0 #000,
+             1px 0 0 #000,
+             0 -1px 0 #000,
+             0 1px 0 #000,
+             0 0 6px rgba(0,0,0,0.25),
+             0 0 6px var(--ribbon-color, var(--primary-color)); }
 
         :root.theme-newyear { --primary-color: #D84315; }
         :root.theme-carnival { --primary-color: #6f42c1; }
@@ -150,6 +169,13 @@
         :root.theme-mothers { --primary-color: #ff4081; }
         :root.theme-fathers { --primary-color: #1976d2; }
         :root.theme-saojoao { --primary-color: #388e3c; }
+        :root.theme-kids { --primary-color: #ff6f61; }
+        :root.theme-worldcup { --primary-color: #1b5e20; }
+        :root.theme-outubro-rosa { --primary-color: #e91e63; }
+        :root.theme-novembro-azul { --primary-color: #1976d2; }
+        :root.theme-setembro-amarelo { --primary-color: #ffc107; }
+        :root.theme-janeiro-branco { --primary-color: #9e9e9e; }
+        :root.theme-maio-laranja { --primary-color: #ff6f00; }
         
         * {
             margin: 0;
@@ -184,7 +210,7 @@
             margin-bottom: 20px;
         }
         
-        .header-content { display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
+        .header-content { display: flex; align-items: center; justify-content: space-between; padding: 0 20px; flex-wrap: wrap; gap: 10px; }
         .right-info { display: flex; align-items: center; gap: 12px; }
         
         .logo-container {
@@ -247,7 +273,7 @@
             background-color: var(--primary-color);
             justify-content: center;
             gap: 18px;
-            flex-wrap: nowrap;
+            flex-wrap: wrap;
         }
         
         .tab {
@@ -835,6 +861,24 @@
             padding: 5px 10px;
             font-size: 11px;
         }
+        /* Estilo da Matriz da Copa (igual ao designer da imagem) */
+        .matrix-subtitle { margin: 6px 0 12px; color: var(--medium-gray); font-size: 13px; }
+        .matrix-actions { margin-bottom: 10px; }
+        .matrix-actions .btn-success { background-color: #2e7d32; }
+        .matrix-actions .btn-success:hover { background-color: #1b5e20; }
+        .copa-matrix-table thead th { background: #f3f5f7; color: #36414a; font-weight: 700; }
+        .copa-matrix-table tbody tr { background: #fff; }
+        .copa-matrix-table input, .copa-matrix-table select { border: 1px solid #dcdfe3; border-radius: 8px; padding: 8px 10px; background: #fff; color: #1f2937; }
+        .copa-matrix-table select { height: 34px; }
+        .input-with-icon { position: relative; display: inline-flex; align-items: center; }
+        .input-with-icon input { padding-right: 30px; }
+        .input-with-icon .input-icon { position: absolute; right: 8px; color: #6b7280; font-size: 14px; }
+        #copa-matrix-table td { vertical-align: middle; }
+        .goal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; align-items: center; justify-content: center; z-index: 9999; }
+        .goal-burst { width: 0; height: 0; border-radius: 50%; background: radial-gradient(circle at center, #ffeb3b 0%, #ffc107 40%, rgba(255,193,7,0) 60%); animation: burst 800ms ease-out forwards; }
+        .goal-text { position: absolute; color: #fff; font-weight: 900; font-size: 42px; text-shadow: 0 2px 16px rgba(0,0,0,0.5); animation: pop 900ms ease-out; }
+        @keyframes burst { to { width: 120vmin; height: 120vmin; } }
+        @keyframes pop { 0% { transform: scale(0.6); opacity: 0; } 50% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); } }
         .perm-panel { display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:12px; background:#f8f9fa; border:1px solid #eee; border-radius:8px; margin-top:10px; }
         .perm-title { font-weight:700; font-size:12px; color: var(--dark-gray); margin-right:8px; }
         .perm-badges { display:flex; gap:6px; align-items:center; }
@@ -1450,6 +1494,10 @@
             .status-cards {
                 grid-template-columns: 1fr;
             }
+        }
+
+        @media (max-width: 1366px) {
+            .tab { min-width: 96px; padding: 10px 12px; }
         }
         
         @media (max-width: 768px) {
@@ -2081,7 +2129,7 @@
   @keyframes spin { 0% { transform: rotate(0deg);} 100% { transform: rotate(360deg);} }
   .logout-fab { position: fixed; right: 16px; bottom: 16px; background: var(--danger); color: #fff; border: none; padding: 10px 14px; border-radius: 20px; font-weight: 700; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,0.2); display: none; z-index: 9999; }
   :not(.require-login) .logout-fab { display: inline-block; }
-</style>
+    </style>
 </head>
 <body>
     <!-- Tela de Login integrada -->
@@ -2420,23 +2468,27 @@
                 <img src="./Nova pasta/Imagem5.png" alt="Logo" class="logo">
                 <div>
                     <h1 class="header-title">Controle de OS Abertas <span id="theme-title-extra" class="theme-extra"></span></h1>
+                    <div id="worldcup-scorebar" style="display:none; margin-top:6px; background: rgba(0,0,0,0.15); color:#fff; padding:8px 14px; border-radius:10px; font-weight:700; font-size:16px;"></div>
                     <p class="header-subtitle">Sistema de gerenciamento de Ordens de Serviço</p>
                 </div>
             </div>
-            <div class="right-info">
-                <div id="theme-banner" class="theme-banner"> </div>
-                <div class="user-info-container" id="user-info-container" style="margin-left: 0; padding: 8px 16px; background: rgba(255,255,255,0.1); border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; gap: 12px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <span class="user-welcome" style="color: white; font-size: 14px;">Olá,</span>
-                    <span class="user-name" id="user-name" style="color: white; font-weight: 600; font-size: 14px;">Usuário</span>
+            <div class="right-info" style="display:flex; flex-direction:column; gap:6px;">
+                <div class="right-top-row" style="display:flex; align-items:center; gap:12px;">
+                    <div id="theme-banner" class="theme-banner"> </div>
+                    <div class="user-info-container" id="user-info-container" style="margin-left: 0; padding: 8px 16px; background: rgba(255,255,255,0.1); border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); display: flex; align-items: center; gap: 12px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="user-welcome" style="color: white; font-size: 14px;">Olá,</span>
+                        <span class="user-name" id="user-name" style="color: white; font-weight: 600; font-size: 14px;">Usuário</span>
+                    </div>
+                    </div>
+                    <span style="color: rgba(255,255,255,0.6); font-size: 14px;">|</span>
+                    <div class="datetime-container" style="display:flex; flex-direction:column; align-items:flex-start; line-height:1;">
+                        <div class="current-time" id="current-time" style="font-size: 14px; color: rgba(255,255,255,0.95); margin: 0;">14:13</div>
+                        <div class="current-date" id="current-date" style="font-size: 12px; color: rgba(255,255,255,0.85); margin: 0;">24/10/2025</div>
+                        <div class="current-day" id="current-day" style="font-size: 12px; color: rgba(255,255,255,0.85); margin: 0;">Sexta-feira</div>
+                    </div>
                 </div>
-            </div>
-                <span style="color: rgba(255,255,255,0.5); font-size: 14px;">|</span>
-                <div class="datetime-container" style="display: flex; flex-direction: column; align-items: flex-start; line-height: 1;">
-                    <div class="current-time" id="current-time" style="font-size: 12px; color: rgba(255,255,255,0.9); margin: 0;">14:13</div>
-                    <div class="current-date" id="current-date" style="font-size: 11px; color: rgba(255,255,255,0.8); margin: 0;">24/10/2025</div>
-                    <div class="current-day" id="current-day" style="font-size: 11px; color: rgba(255,255,255,0.8); margin: 0;">Sexta-feira</div>
-                </div>
+                <div id="brazil-match-banner" style="display:none; background: rgba(0,0,0,0.15); color:#fff; padding:6px 10px; border-radius:10px; font-weight:700; font-size:14px;"></div>
             </div>
         </div>
     </header>
@@ -2464,6 +2516,8 @@
                 <div class="tab" data-tab="transferencia-escalonamento">Transferencia de Escalonamento</div>
                 <div class="tab" data-tab="logs-status" id="tab-logs-status">Log de Alteração de Status</div>
                 <div class="tab" data-tab="cadastro-usuarios" id="tab-cadastro-usuarios">Cadastrar Usuários</div>
+                <div class="tab" data-tab="tema" id="tab-tema">Altera Tema</div>
+                <div class="tab" data-tab="copa-tabela">Carrega Tabela Copa</div>
             </div>
             
             <!-- Aba OS Externa -->
@@ -2933,6 +2987,77 @@
                 </details>
             </div>
             
+            <!-- Aba: Carrega Tabela Copa -->
+            <div class="tab-content" id="copa-tabela">
+                <div class="update-tab-section">
+                    <h2>Carregar Placar da Copa (CSV)</h2>
+                    <p>Baixe o modelo, atualize os placares no CSV e importe.</p>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" id="btn-download-csv-model">Baixar Modelo CSV</button>
+                        <input type="file" id="csv-file-input" accept=".csv" style="display:none" />
+                        <button class="btn" id="btn-escolher-csv" style="background:#6c757d;color:#fff;">Escolher CSV</button>
+                        <button class="btn btn-success" id="btn-importar-csv" disabled>Importar CSV para Supabase</button>
+                    </div>
+                    <div id="csv-feedback" class="success-message" style="display:none"><span class="message-text"></span></div>
+                </div>
+                <div class="update-tab-section">
+                    <h3>Pré-visualização</h3>
+                    <div class="table-container">
+                        <table id="csv-preview-table">
+                            <thead>
+                                <tr>
+                                    <th>Time A</th>
+                                    <th>Gols A</th>
+                                    <th>Gols B</th>
+                                    <th>Time B</th>
+                                    <th>Status</th>
+                                    <th>Horário</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="update-tab-section">
+                    <h3>Tabela da Copa (Matriz para edição)</h3>
+                    <p class="matrix-subtitle">Edite abaixo os jogos e placares. As alterações atualizam a barra de placar.</p>
+                    <div class="action-buttons matrix-actions" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <button class="btn btn-success" id="btn-add-row">+ Adicionar Linha</button>
+                        <button class="btn btn-success" id="btn-save-bulk">Salvar Alterações</button>
+                        <button class="btn btn-primary" id="btn-refresh-matrix">Atualizar Matriz</button>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <button class="btn" id="matrix-prev-date">◀ Data anterior</button>
+                            <span id="matrix-date-label" style="font-weight:700; color:#36414a;">Todas as datas</span>
+                            <button class="btn" id="matrix-next-date">Próxima data ▶</button>
+                            <label style="display:flex; align-items:center; gap:6px; font-size:12px; margin-left:8px;">
+                                <input type="checkbox" id="matrix-show-all"> Mostrar todas as datas
+                            </label>
+                        </div>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12px;">
+                            <input type="checkbox" id="auto-refresh-matrix"> Auto atualizar a cada 15s
+                        </label>
+                        <span id="matrix-feedback" class="success-message" style="display:none"><span class="message-text"></span></span>
+                    </div>
+                    <div class="table-container">
+                        <table id="copa-matrix-table" class="copa-matrix-table">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Hora</th>
+                                    <th>Seleção A</th>
+                                    <th>Gols A</th>
+                                    <th>Seleção B</th>
+                                    <th>Gols B</th>
+                                    <th>Situação</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="copa-matrix-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Nova Aba: Dashboard - ATUALIZADA -->
             <div class="tab-content" id="dashboard">
                 <!-- NOVO: Indicador de data/hora da última atualização -->
@@ -3346,6 +3471,13 @@
                                 <option value="namorados">Dia dos Namorados</option>
                                 <option value="carnaval">Carnaval</option>
                                 <option value="saojoao">São João</option>
+                                <option value="criancas">Dia das Crianças</option>
+                                <option value="copa">Copa do Mundo</option>
+                                <option value="outubro_rosa">Outubro Rosa</option>
+                                <option value="novembro_azul">Novembro Azul</option>
+                                <option value="setembro_amarelo">Setembro Amarelo</option>
+                                <option value="janeiro_branco">Janeiro Branco</option>
+                                <option value="maio_laranja">Maio Laranja</option>
                             </select>
                             <button class="btn btn-success" id="btn-aplicar-tema">Aplicar Tema</button>
                             <button class="btn" id="btn-tema-padrao">Voltar ao Padrão</button>
@@ -5174,6 +5306,23 @@
                         }
                     }
 
+                    if (tabId === 'tema') {
+                        document.querySelectorAll('.tab.active, .tab-content.active').forEach(el => el.classList.remove('active'));
+                        const cadastroTab = document.querySelector('.tabs .tab[data-tab="cadastro-usuarios"]');
+                        if (cadastroTab) cadastroTab.classList.add('active');
+                        const cadastroContent = document.getElementById('cadastro-usuarios');
+                        if (cadastroContent) cadastroContent.classList.add('active');
+                        const subActive = cadastroContent ? cadastroContent.querySelector('.tab-content.active') : null;
+                        if (subActive) subActive.classList.remove('active');
+                        const temaSubTab = cadastroContent ? cadastroContent.querySelector('.tab[data-tab="usuarios-tema"]') : null;
+                        if (temaSubTab) temaSubTab.classList.add('active');
+                        const temaContent = cadastroContent ? cadastroContent.querySelector('#usuarios-tema') : null;
+                        if (temaContent) temaContent.classList.add('active');
+                        renderTemaTab();
+                        currentTab = 'cadastro-usuarios';
+                        return;
+                    }
+
                     // Tabs internas da seção de Transferência (não alteram currentTab)
                     const isTransferSubTab = tabId && tabId.startsWith('transferencia-') && this.closest('#transferencia-escalonamento');
                     if (isTransferSubTab && tabId !== 'transferencia-escalonamento') {
@@ -5230,7 +5379,9 @@
                         loadUsuariosList();
                     } else if (currentTab === 'logs-status') {
                         initializeLogsTab();
-                    } else if (currentTab !== 'atualizacao' && currentTab !== 'transferencia-escalonamento' && currentTab !== 'atualizar-valores') {
+                    } else if (currentTab === 'copa-tabela') {
+                        try { loadCopaMatrix(); } catch(_) {}
+                    } else if (currentTab !== 'atualizacao' && currentTab !== 'transferencia-escalonamento' && currentTab !== 'atualizar-valores' && currentTab !== 'copa-tabela') {
                         loadOSData();
                     }
                 });
@@ -5330,6 +5481,42 @@
             document.getElementById('valor-filter-select').addEventListener('change', function() {
                 loadDashboardData();
             });
+
+            const btnModelo = document.getElementById('btn-download-csv-model');
+            if (btnModelo) btnModelo.addEventListener('click', downloadCopaCsvModelo);
+            const btnEscolher = document.getElementById('btn-escolher-csv');
+            const inputCsv = document.getElementById('csv-file-input');
+            if (btnEscolher && inputCsv) btnEscolher.addEventListener('click', () => inputCsv.click());
+            if (inputCsv) inputCsv.addEventListener('change', async (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (!file) return;
+                const text = await file.text();
+                parsedCopaRows = parseCSV(text);
+                renderCsvPreview(parsedCopaRows);
+                const btnImportCopa = document.getElementById('btn-importar-csv');
+                if (btnImportCopa) btnImportCopa.disabled = !(parsedCopaRows && parsedCopaRows.length);
+            });
+            const btnImportCopa = document.getElementById('btn-importar-csv');
+            if (btnImportCopa) btnImportCopa.addEventListener('click', async () => {
+                if (!parsedCopaRows || !parsedCopaRows.length) return;
+                await importCopaCsv(parsedCopaRows);
+            });
+
+            const btnRefreshMatrix = document.getElementById('btn-refresh-matrix');
+            if (btnRefreshMatrix) btnRefreshMatrix.addEventListener('click', async () => { await loadCopaMatrix(); });
+            const autoRefreshEl = document.getElementById('auto-refresh-matrix');
+            if (autoRefreshEl) autoRefreshEl.addEventListener('change', () => { toggleCopaMatrixAutoRefresh(autoRefreshEl.checked); });
+            const btnAddRow = document.getElementById('btn-add-row');
+            if (btnAddRow) btnAddRow.addEventListener('click', () => { addCopaMatrixRow(); });
+            const btnSaveBulk = document.getElementById('btn-save-bulk');
+            if (btnSaveBulk) btnSaveBulk.addEventListener('click', async () => { await saveCopaMatrixBulk(); });
+            try { subscribeWorldCupRealtime(); } catch(_) {}
+            const prevDateBtn = document.getElementById('matrix-prev-date');
+            const nextDateBtn = document.getElementById('matrix-next-date');
+            const showAllDates = document.getElementById('matrix-show-all');
+            if (prevDateBtn) prevDateBtn.addEventListener('click', async ()=>{ if (!window.copaMatrixDates || !window.copaMatrixDates.length) return; window.copaMatrixDateIdx = Math.max(0, (window.copaMatrixDateIdx||0) - 1); await loadCopaMatrix(); });
+            if (nextDateBtn) nextDateBtn.addEventListener('click', async ()=>{ if (!window.copaMatrixDates || !window.copaMatrixDates.length) return; window.copaMatrixDateIdx = Math.min(window.copaMatrixDates.length-1, (window.copaMatrixDateIdx||0) + 1); await loadCopaMatrix(); });
+            if (showAllDates) showAllDates.addEventListener('change', async ()=>{ await loadCopaMatrix(); });
 
             // Event listeners da aba de logs
             const btnLogs = document.getElementById('btn-aplicar-filtros-log');
@@ -5631,6 +5818,7 @@
             if (m === 6 && day === 12) return 'namorados';
             if (m === 6 && day >= 20) return 'saojoao';
             if (m === 8) return 'pais';
+            if (m === 10 && day === 12) return 'criancas';
             return 'padrao';
         }
 
@@ -5641,19 +5829,29 @@
             removeThemeOverlays();
             if (chosen === 'natal') { document.documentElement.classList.add('theme-christmas'); addSnow(); }
             else if (chosen === 'anonovo') { document.documentElement.classList.add('theme-newyear'); addFireworks(); }
+            else if (chosen === 'padrao') { addFireworks(); }
             else if (chosen === 'carnaval') { document.documentElement.classList.add('theme-carnival'); addConfetti(true); }
             else if (chosen === 'namorados') { document.documentElement.classList.add('theme-valentines'); addArrowHearts(); }
             else if (chosen === 'maes') { document.documentElement.classList.add('theme-mothers'); addHearts(); }
             else if (chosen === 'pais') { document.documentElement.classList.add('theme-fathers'); addConfetti(false); }
             else if (chosen === 'saojoao') { document.documentElement.classList.add('theme-saojoao'); addLanterns(); }
+            else if (chosen === 'criancas') { document.documentElement.classList.add('theme-kids'); addKidsDecor(); }
+            else if (chosen === 'outubro_rosa') { document.documentElement.classList.add('theme-outubro-rosa'); }
+            else if (chosen === 'novembro_azul') { document.documentElement.classList.add('theme-novembro-azul'); }
+            else if (chosen === 'setembro_amarelo') { document.documentElement.classList.add('theme-setembro-amarelo'); }
+            else if (chosen === 'janeiro_branco') { document.documentElement.classList.add('theme-janeiro-branco'); }
+            else if (chosen === 'maio_laranja') { document.documentElement.classList.add('theme-maio-laranja'); }
+            else if (chosen === 'copa') { document.documentElement.classList.add('theme-worldcup'); addWorldCupDecor(); startWorldCupScores(); startBrazilMatchBanner(); }
+            else { stopWorldCupScores(); stopBrazilMatchBanner(); }
             setThemeBadge(chosen);
             setHeaderExtras(chosen);
             setSantaIcon(chosen === 'natal');
         }
 
         function removeThemeOverlays(){
-            ['snow-overlay','confetti-overlay','hearts-overlay','lantern-overlay','fireworks-overlay','arrowhearts-overlay'].forEach(id=>{
+            ['snow-overlay','confetti-overlay','hearts-overlay','lantern-overlay','fireworks-overlay','arrowhearts-overlay','kids-overlay','worldcup-overlay','campaign-overlay'].forEach(id=>{
                 const el = document.getElementById(id);
+                if (el && id==='fireworks-overlay' && el._timer) { try { clearInterval(el._timer); } catch(_){} }
                 if (el && el.parentNode) el.parentNode.removeChild(el);
             });
         }
@@ -5677,7 +5875,7 @@
             if (!overlay) {
                 overlay = document.createElement('div'); overlay.id='confetti-overlay'; document.body.appendChild(overlay);
                 const colors = rainbow ? ['#FCB026','#e91e63','#6f42c1','#17a2b8','#28a745','#fd7e14','#dc3545'] : ['#FCB026','#1976d2','#6c757d'];
-                for (let i=0;i<120;i++){
+                for (let i=0;i<80;i++){
                     const c = document.createElement('span'); c.className='confetti-piece';
                     c.style.left = Math.floor(Math.random()*100)+'vw';
                     c.style.background = colors[Math.floor(Math.random()*colors.length)];
@@ -5686,6 +5884,23 @@
                     overlay.appendChild(c);
                 }
             }
+        }
+        function playConfettiOnce({ rainbow=true, count=36, duration=2200 }){
+            const id = 'goal-confetti-overlay';
+            let overlay = document.getElementById(id);
+            if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            overlay = document.createElement('div'); overlay.id=id; overlay.style.position='fixed'; overlay.style.inset='0'; overlay.style.pointerEvents='none'; overlay.style.zIndex='9999';
+            document.body.appendChild(overlay);
+            const colors = rainbow ? ['#FCB026','#e91e63','#6f42c1','#17a2b8','#28a745','#fd7e14','#dc3545'] : ['#FCB026','#1976d2','#6c757d'];
+            for (let i=0;i<count;i++){
+                const c = document.createElement('span'); c.className='confetti-piece';
+                c.style.left = Math.floor(Math.random()*100)+'vw';
+                c.style.background = colors[Math.floor(Math.random()*colors.length)];
+                c.style.animationDuration = (2.6+Math.random()*2.8)+'s';
+                c.style.animationDelay = (Math.random()*0.3)+'s';
+                overlay.appendChild(c);
+            }
+            setTimeout(()=>{ if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay); }, duration);
         }
         function addHearts(){
             let overlay = document.getElementById('hearts-overlay');
@@ -5715,6 +5930,25 @@
                 }
             }
         }
+        function addCampaignDecor(theme){
+            let overlay = document.getElementById('campaign-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div'); overlay.id='campaign-overlay'; document.body.appendChild(overlay);
+                const colorMap = { outubro_rosa:'#e91e63', novembro_azul:'#1976d2', setembro_amarelo:'#ffc107', janeiro_branco:'#9e9e9e', maio_laranja:'#ff6f00' };
+                const c = colorMap[theme] || getComputedStyle(document.documentElement).getPropertyValue('--primary-color') || '#e91e63';
+                overlay.style.setProperty('--ribbon-color', c.trim() || '#e91e63');
+                for (let i=0;i<60;i++){
+                    const r = document.createElement('span'); r.className='campaign-ribbon';
+                    r.style.left = Math.floor(Math.random()*100)+'vw';
+                    r.style.animationDuration = (6+Math.random()*6)+'s';
+                    r.style.animationDelay = (Math.random()*4)+'s';
+                    const l = document.createElement('span'); l.className='l';
+                    const rr = document.createElement('span'); rr.className='r';
+                    r.appendChild(l); r.appendChild(rr);
+                    overlay.appendChild(r);
+                }
+            }
+        }
         function addLanterns(){
             let overlay = document.getElementById('lantern-overlay');
             if (!overlay) {
@@ -5728,22 +5962,179 @@
                 }
             }
         }
-        function addFireworks(){
-            let overlay = document.getElementById('fireworks-overlay');
+        function addKidsDecor(){
+            let overlay = document.getElementById('kids-overlay');
             if (!overlay) {
-                overlay = document.createElement('div'); overlay.id='fireworks-overlay'; document.body.appendChild(overlay);
-                const colors = ['#ffd54f','#ff5252','#40c4ff','#69f0ae','#7c4dff'];
-                for (let i=0;i<120;i++){
-                    const f = document.createElement('span'); f.className='firework';
-                    const color = colors[Math.floor(Math.random()*colors.length)];
-                    f.style.left = Math.floor(Math.random()*100)+'vw';
-                    f.style.animationDuration = (4+Math.random()*4)+'s';
-                    f.style.animationDelay = (Math.random()*3)+'s';
-                    f.style.background = color;
-                    f.style.boxShadow = '0 0 10px '+color+', 0 0 14px '+color;
-                    overlay.appendChild(f);
+                overlay = document.createElement('div'); overlay.id='kids-overlay'; document.body.appendChild(overlay);
+                const emojis = ['🎈','🧸','🎠','🍭'];
+                for (let i=0;i<90;i++){
+                    const b=document.createElement('span'); b.className='balloon'; b.textContent=emojis[Math.floor(Math.random()*emojis.length)];
+                    b.style.left=Math.floor(Math.random()*100)+'vw';
+                    b.style.animationDuration=(6+Math.random()*6)+'s';
+                    b.style.animationDelay=(Math.random()*4)+'s';
+                    b.style.fontSize=(16+Math.random()*12)+'px';
+                    overlay.appendChild(b);
                 }
             }
+        }
+        function addWorldCupDecor(){
+            let overlay = document.getElementById('worldcup-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div'); overlay.id='worldcup-overlay'; document.body.appendChild(overlay);
+                const colors = ['#1b5e20','#ffd54f','#00c853'];
+                for (let i=0;i<16;i++){
+                    const s=document.createElement('span'); s.className='soccer'; s.textContent='⚽';
+                    s.style.left=Math.floor(Math.random()*100)+'vw';
+                    s.style.animationDuration=(10+Math.random()*6)+'s';
+                    s.style.animationDelay=(Math.random()*2)+'s';
+                    s.style.color=colors[Math.floor(Math.random()*colors.length)];
+                    s.style.fontSize=(14+Math.random()*10)+'px';
+                    overlay.appendChild(s);
+                }
+            }
+        }
+        let worldCupTimer=null;
+        let worldCupTickerTimer=null;
+        let worldCupTickerIndex=0;
+        function ensureWorldCupStyles(){
+            let s=document.getElementById('wc-styles');
+            if(s) return;
+            s=document.createElement('style');
+            s.id='wc-styles';
+            s.textContent="#worldcup-scorebar .wc-item{display:inline-flex;align-items:center;gap:8px}#worldcup-scorebar .wc-ball{display:inline-block;width:18px;height:18px;line-height:18px;text-align:center}#worldcup-scorebar .wc-ball{animation:wc-roll 1.2s linear infinite}@keyframes wc-roll{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}";
+            document.head.appendChild(s);
+        }
+        function fixAccents(s){
+            try {
+                const t = String(s || '');
+                if (t.includes('Ã') || t.includes('Â') || t.includes('¢') || t.includes('¤')) {
+                    return decodeURIComponent(escape(t)).normalize('NFC');
+                }
+                return t.normalize('NFC');
+            } catch(_) {
+                try { return String(s || '').normalize('NFC'); } catch(__) { return String(s || ''); }
+            }
+        }
+        async function startWorldCupScores(){
+            const bar=document.getElementById('worldcup-scorebar'); if(!bar) return;
+            bar.style.display='block';
+            ensureWorldCupStyles();
+            function dateOnly(iso){ try{ const d=new Date(iso); return isNaN(d)?null : d.toISOString().slice(0,10); }catch(_){ return null; } }
+            function formatPtBr(iso){ try{ const d=new Date(iso); if(isNaN(d)) return ''; const h=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); const dt=d.toLocaleDateString('pt-BR'); return ` — ${h} • ${dt}`; }catch(_){ return ''; } }
+            function displayStatus(st, mt){ try{ const d=new Date(mt); const now=new Date(); const diff=(now - d)/60000; if(!isNaN(d) && diff>=-15 && diff<=120) return 'Ao Vivo'; }catch(_){} return st || ''; }
+            const fetchScores=async()=>{
+                try {
+                    const tables=[{name:'copa_scores',a:'team_a',b:'team_b',sa:'score_a',sb:'score_b',st:'status'},{name:'placares_copa',a:'time_a',b:'time_b',sa:'gols_a',sb:'gols_b',st:'status'}];
+                    let rows=null;
+                    for (const t of tables){ try{ const {data,error}=await supabase.from(t.name).select('*').limit(20); if(!error&&data&&data.length){ rows=data.map(r=>({a:r[t.a],b:r[t.b],sa:r[t.sa],sb:r[t.sb],st:r[t.st],mt:r.match_time||r.match_time||null})); break; } }catch(_){} }
+                    if (!rows||!rows.length){ bar.textContent='Sem partidas ao vivo.'; return; }
+                    const now=new Date();
+                    const control=new Date('2026-06-01T00:00:00Z');
+                    let filtered=rows;
+                    if (now >= control) {
+                        const dates=(rows.map(r=>dateOnly(r.mt)).filter(Boolean));
+                        const earliest=(dates.length? dates.sort()[0] : null);
+                        filtered=earliest? rows.filter(r=>dateOnly(r.mt)===earliest) : rows;
+                    }
+                    const items=filtered.map(r=>{
+                        const a=fixAccents(String(r.a||''));
+                        const b=fixAccents(String(r.b||''));
+                        const st=fixAccents(String(displayStatus(r.st, r.mt)));
+                        const sa=(r.sa==null?0:r.sa);
+                        const sb=(r.sb==null?0:r.sb);
+                        const starA=a.includes('Brasil')?'★ ':'';
+                        const starB=b.includes('Brasil')?'★ ':'';
+                        const when=formatPtBr(r.mt);
+                        return `<span class="wc-item">${starA}<span class="wc-ball">⚽</span> ${a} ${sa}×${sb} ${starB}<span class="wc-ball">⚽</span> ${b}${st?` (${st})`:''}${when}</span>`;
+                    });
+                    worldCupTickerIndex=0;
+                    bar.innerHTML=items[worldCupTickerIndex]||'';
+                    if(worldCupTickerTimer) clearInterval(worldCupTickerTimer);
+                    worldCupTickerTimer=setInterval(()=>{ if(!items.length) return; worldCupTickerIndex=(worldCupTickerIndex+1)%items.length; bar.innerHTML=items[worldCupTickerIndex]; }, 5000);
+                } catch(_) { bar.textContent='Sem partidas ao vivo.'; }
+            };
+            window.refreshWorldCupScorebar = fetchScores;
+            await fetchScores();
+            if (worldCupTimer) clearInterval(worldCupTimer);
+            worldCupTimer=setInterval(fetchScores, 15000);
+        }
+        function stopWorldCupScores(){ const bar=document.getElementById('worldcup-scorebar'); if(bar){ bar.style.display='none'; bar.textContent=''; } if(worldCupTimer){ clearInterval(worldCupTimer); worldCupTimer=null; } if(worldCupTickerTimer){ clearInterval(worldCupTickerTimer); worldCupTickerTimer=null; } }
+
+        let brazilBannerTimer=null;
+        async function startBrazilMatchBanner(){
+            const el=document.getElementById('brazil-match-banner'); if(!el) return;
+            el.style.display='block';
+            const fetchBrazil=async()=>{
+                try{
+                    const tables=[{name:'copa_scores',a:'team_a',b:'team_b',sa:'score_a',sb:'score_b',st:'status',mt:'match_time'},{name:'placares_copa',a:'time_a',b:'time_b',sa:'gols_a',sb:'gols_b',st:'status',mt:'match_time'}];
+                    let rows=[];
+                    for(const t of tables){
+                        try{ const {data,error}=await supabase.from(t.name).select('*'); if(!error&&Array.isArray(data)){ rows=data.map(r=>({a:r[t.a],b:r[t.b],sa:r[t.sa],sb:r[t.sb],st:r[t.st],mt:r[t.mt]})); if(rows.length) break; } }catch(_){}
+                    }
+                    if(!rows.length){ el.textContent='Sem partidas do Brasil.'; return; }
+                    const brRows=rows.filter(r=>{
+                        const a=fixAccents(String(r.a||''));
+                        const b=fixAccents(String(r.b||''));
+                        return a.toLowerCase().includes('brasil') || b.toLowerCase().includes('brasil');
+                    });
+                    if(!brRows.length){ el.textContent='Sem partidas do Brasil.'; return; }
+                    brRows.sort((x,y)=>{
+                        const tx=Date.parse(x.mt||''); const ty=Date.parse(y.mt||'');
+                        const vx=isNaN(tx)?Number.MAX_SAFE_INTEGER:tx;
+                        const vy=isNaN(ty)?Number.MAX_SAFE_INTEGER:ty;
+                        return vx-vy;
+                    });
+                    const r=brRows[0];
+                    let a=fixAccents(String(r.a||''));
+                    let b=fixAccents(String(r.b||''));
+                    let sa=(r.sa==null?0:r.sa), sb=(r.sb==null?0:r.sb);
+                    if(b.toLowerCase().includes('brasil')){ const ta=a, tsa=sa; a=b; sa=sb; b=ta; sb=tsa; }
+                    const st=fixAccents(String(r.st||''));
+                    let dh='';
+                    if (r.mt) {
+                        const d=new Date(r.mt);
+                        const hora=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+                        const data=d.toLocaleDateString('pt-BR');
+                        dh=` — ${hora} • ${data}`;
+                    }
+                    el.textContent=`${a} ${sa}×${sb} ${b}${st?` (${st})`:''}${dh}`;
+                } catch(_){ el.textContent='Sem partidas do Brasil.'; }
+            };
+            window.refreshBrazilMatchBanner = fetchBrazil;
+            await fetchBrazil();
+            if(brazilBannerTimer) clearInterval(brazilBannerTimer);
+            brazilBannerTimer=setInterval(fetchBrazil, 20000);
+        }
+        function stopBrazilMatchBanner(){ const el=document.getElementById('brazil-match-banner'); if(el){ el.style.display='none'; el.textContent=''; } if(brazilBannerTimer){ clearInterval(brazilBannerTimer); brazilBannerTimer=null; } }
+        function addFireworks(){
+            let overlay = document.getElementById('fireworks-overlay');
+            if (!overlay) { overlay = document.createElement('div'); overlay.id='fireworks-overlay'; document.body.appendChild(overlay); }
+            overlay.innerHTML = '';
+            const colors = ['#ffd54f','#ff5252','#40c4ff','#69f0ae','#7c4dff'];
+            function spawnBurst(){
+                const w = window.innerWidth || document.documentElement.clientWidth;
+                const h = window.innerHeight || document.documentElement.clientHeight;
+                const cx = Math.floor(w*0.08 + Math.random()*w*0.84);
+                const cy = Math.floor(h*0.18 + Math.random()*h*0.56);
+                const particles = 12 + Math.floor(Math.random()*6);
+                for (let i=0;i<particles;i++){
+                    const angle = (Math.PI*2 * i/particles) + Math.random()*0.6;
+                    const dist = 80 + Math.random()*120;
+                    const sx = Math.cos(angle) * dist;
+                    const sy = Math.sin(angle) * dist;
+                    const s = document.createElement('span'); s.className='fw-spark';
+                    s.style.left = cx + 'px'; s.style.top = cy + 'px';
+                    s.style.setProperty('--tx', sx + 'px'); s.style.setProperty('--ty', sy + 'px');
+                    const color = colors[Math.floor(Math.random()*colors.length)];
+                    s.style.background = color; s.style.boxShadow = '0 0 10px '+color+', 0 0 14px '+color;
+                    s.style.animationDuration = (900 + Math.floor(Math.random()*900)) + 'ms';
+                    s.style.animationDelay = Math.floor(Math.random()*200) + 'ms';
+                    overlay.appendChild(s);
+                    setTimeout(()=>{ if (s && s.parentNode) s.parentNode.removeChild(s); }, 2200);
+                }
+            }
+            for (let i=0;i<6;i++){ setTimeout(spawnBurst, i*250); }
+            if (!overlay._timer) { overlay._timer = setInterval(spawnBurst, 1200); }
         }
 
         (function initThemeOnLoad(){
@@ -5807,12 +6198,21 @@
                 namorados: '💘 Feliz Dia dos Namorados',
                 maes: '💐 Feliz Dia das Mães',
                 pais: '👨‍👧 Feliz Dia dos Pais',
-                saojoao: '🔥 Viva São João'
+                saojoao: '🔥 Viva São João',
+                criancas: '🎈 Feliz Dia das Crianças',
+                copa: '⚽ Copa do Mundo',
+                outubro_rosa: '🎗 Outubro Rosa',
+                novembro_azul: '🎗 Novembro Azul',
+                setembro_amarelo: '🎗 Setembro Amarelo',
+                janeiro_branco: '🎗 Janeiro Branco',
+                maio_laranja: '🎗 Maio Laranja'
             };
             const text = map[theme] || '';
             banner.textContent = text;
             banner.style.display = text ? 'inline-block' : 'none';
-            banner.style.fontSize = '20px';
+            const isCampaign = ['outubro_rosa','novembro_azul','setembro_amarelo','janeiro_branco','maio_laranja'].includes(theme);
+            banner.style.fontSize = isCampaign ? '24px' : '20px';
+            banner.style.fontWeight = '700';
         }
         function setHeaderExtras(theme){
             const ex = document.getElementById('theme-title-extra');
@@ -5822,6 +6222,9 @@
             else if (theme === 'carnaval') ex.textContent = '🐓';
             else if (theme === 'anonovo') ex.textContent = '🎆';
             else if (theme === 'namorados') ex.textContent = '💘';
+            else if (theme === 'criancas') ex.textContent = '🎈';
+            else if (theme === 'copa') ex.textContent = '⚽';
+            else if (['outubro_rosa','novembro_azul','setembro_amarelo','janeiro_branco','maio_laranja'].includes(theme)) ex.innerHTML = '<span class="campaign-icon">🎗</span>';
             else ex.textContent = '';
         }
         function setSantaIcon(show){
@@ -6329,6 +6732,477 @@
             const localNow = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
             const dayStr = localNow.toISOString().slice(0,10);
             return { from: dayStr, to: dayStr };
+        }
+
+        let parsedCopaRows = [];
+        let copaMatrixTimer = null;
+
+        function buildCopaCsvTemplate() {
+            const header = ['team_a','score_a','score_b','team_b','status','match_time'];
+            const sample = [
+                ['Brasil','2','1','Argentina','Ao vivo','2025-06-20T18:00:00Z'],
+                ['França','0','0','Espanha','Encerrado','2025-06-21T20:00:00Z']
+            ];
+            const lines = [header.join(',')].concat(sample.map(r => r.map(x => String(x)).join(',')));
+            return lines.join('\n');
+        }
+
+        function downloadCopaCsvModelo() {
+            try {
+                const csv = buildCopaCsvTemplate();
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'modelo_copa_scores.csv';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch(_) {}
+        }
+
+        function parseCSV(text) {
+            const lines = text.split(/\r?\n/).filter(l => l.trim().length);
+            if (!lines.length) return [];
+            const delim = lines[0].includes(';') ? ';' : ',';
+            const headers = lines[0].split(delim).map(h => h.trim());
+            const idx = {
+                team_a: headers.indexOf('team_a'),
+                team_b: headers.indexOf('team_b'),
+                score_a: headers.indexOf('score_a'),
+                score_b: headers.indexOf('score_b'),
+                status: headers.indexOf('status'),
+                match_time: headers.indexOf('match_time')
+            };
+            const rows = [];
+            for (let i = 1; i < lines.length; i++) {
+                const cols = lines[i].split(delim);
+                if (!cols.length) continue;
+                const row = {
+                    team_a: fixAccents((cols[idx.team_a] || '').trim()),
+                    team_b: fixAccents((cols[idx.team_b] || '').trim()),
+                    score_a: parseInt((cols[idx.score_a] || '0').trim(), 10) || 0,
+                    score_b: parseInt((cols[idx.score_b] || '0').trim(), 10) || 0,
+                    status: fixAccents((cols[idx.status] || '').trim()) || 'Ao vivo',
+                    match_time: (cols[idx.match_time] || '').trim() || null
+                };
+                if (row.team_a && row.team_b) rows.push(row);
+            }
+            return rows;
+        }
+
+        function renderCsvPreview(rows) {
+            const tbody = document.querySelector('#csv-preview-table tbody');
+            if (!tbody) return;
+            if (!rows || !rows.length) { tbody.innerHTML = ''; return; }
+            tbody.innerHTML = rows.map(r => `
+                <tr>
+                    <td>${r.team_a}</td>
+                    <td>${r.score_a}</td>
+                    <td>${r.score_b}</td>
+                    <td>${r.team_b}</td>
+                    <td>${r.status}</td>
+                    <td>${r.match_time || ''}</td>
+                </tr>
+            `).join('');
+        }
+
+async function loadCopaMatrix(){
+    const tbody=document.getElementById('copa-matrix-body');
+    if (!tbody) return;
+    try {
+        const tableEl = document.getElementById('copa-matrix-table');
+        const container = tableEl ? tableEl.closest('.table-container') : null;
+        const prevScroll = container ? container.scrollTop : 0;
+        const active = document.activeElement;
+        const activeKey = (()=>{ if (!active) return null; const tr = active.closest('tr'); if (!tr) return null; const idx = tr.getAttribute('data-index'); const classes = ['matrix-date','matrix-time','matrix-team-a','matrix-sa','matrix-team-b','matrix-sb','matrix-st']; const cls = classes.find(c=>active.classList && active.classList.contains(c)); if (!cls) return null; return { idx, cls }; })();
+        let rows = await fetchWorldCupData();
+        const labelEl = document.getElementById('matrix-date-label');
+        const showAllEl = document.getElementById('matrix-show-all');
+        const showAllOn = !!(showAllEl && showAllEl.checked);
+        const dates = Array.from(new Set(rows.map(r=>r.dateStr || unifyDateStr(r.match_time)).filter(Boolean))).sort();
+        window.copaMatrixDates = dates;
+        if (!showAllOn){
+            window.copaMatrixDateIdx = typeof window.copaMatrixDateIdx==='number' ? Math.min(Math.max(window.copaMatrixDateIdx,0), Math.max(dates.length-1,0)) : 0;
+            const current = dates[window.copaMatrixDateIdx] || null;
+            if (current){ rows = rows.filter(r=> (r.dateStr || unifyDateStr(r.match_time)) === current); if (labelEl) labelEl.textContent = new Date(current).toLocaleDateString('pt-BR'); }
+            else { if (labelEl) labelEl.textContent = 'Todas as datas'; }
+        } else { if (labelEl) labelEl.textContent = 'Todas as datas'; }
+        rows.sort((a,b)=>{ const ad=(a.dateStr||unifyDateStr(a.match_time)||''); const bd=(b.dateStr||unifyDateStr(b.match_time)||''); if(ad!==bd) return ad>bd?1:-1; const at=(a.timeStr||unifyTimeStr(a.match_time)||''); const bt=(b.timeStr||unifyTimeStr(b.match_time)||''); return at>bt?1:-1; });
+        const tableUsed = rows && rows.length ? { name: 'copa_scores' } : null;
+        window.copaActiveTable = tableUsed ? tableUsed.name : 'copa_scores';
+        if (!rows.length){ tbody.innerHTML='<tr><td colspan="8">Sem dados</td></tr>'; return; }
+        tbody.innerHTML = rows.map((r,i)=>{
+            const opts=['Agendado','Ao Vivo','Encerrado'];
+            const options=opts.map(o=>`<option value="${o}" ${String(r.status||'')===o?'selected':''}>${o}</option>`).join('');
+            const dVal = (()=>{ try{ const d=new Date(r.match_time); return isNaN(d)?(r.dateStr||unifyDateStr(r.match_time)||''):d.toISOString().slice(0,10);}catch(_){ return r.dateStr||unifyDateStr(r.match_time)||''; } })();
+            const tVal = (()=>{ try{ const d=new Date(r.match_time); if (isNaN(d)) return r.timeStr||unifyTimeStr(r.match_time)||''; const hh=String(d.getHours()).padStart(2,'0'); const mm=String(d.getMinutes()).padStart(2,'0'); return `${hh}:${mm}`; }catch(_){ return r.timeStr||unifyTimeStr(r.match_time)||''; } })();
+            return `
+                <tr data-index="${i}" data-id="${r.id||''}" data-table="${r.table}">
+                    <td><div class="input-with-icon"><input type="date" class="matrix-date" value="${dVal}" style="width:140px"><span class="input-icon">📅</span></div></td>
+                    <td><div class="input-with-icon"><input type="time" class="matrix-time" value="${tVal}" style="width:100px"><span class="input-icon">🕒</span></div></td>
+                    <td><input type="text" class="matrix-team-a" value="${r.team_a}" style="min-width:160px"></td>
+                    <td><input type="number" class="matrix-sa" value="${r.score_a}" min="0" style="width:64px"></td>
+                    <td><input type="text" class="matrix-team-b" value="${r.team_b}" style="min-width:160px"></td>
+                    <td><input type="number" class="matrix-sb" value="${r.score_b}" min="0" style="width:64px"></td>
+                    <td><select class="matrix-st">${options}</select></td>
+                    <td><button class="btn btn-secondary" id="remove-row-${i}">Remover</button></td>
+                </tr>`;
+        }).join('');
+        // Apenas botão Remover por linha; salvamento é feito em massa
+        tbody.querySelectorAll('button[id^="remove-row-"]').forEach(btn=>{
+            btn.addEventListener('click', async (e)=>{
+                const tr = e.target.closest('tr');
+                const id = tr.getAttribute('data-id');
+                const table = tr.getAttribute('data-table');
+                if (!id){ tr.remove(); return; }
+                await deleteCopaMatrixRow({ table, id });
+            });
+        });
+        window.copaLastScores = window.copaLastScores || {};
+        updateBrazilScoreSnapshot(rows);
+        if (container) container.scrollTop = prevScroll;
+        if (activeKey){ const tr = tbody.querySelector(`tr[data-index="${activeKey.idx}"]`); const el = tr ? tr.querySelector(`.${activeKey.cls}`) : null; if (el) { const val = el.value; el.focus(); el.value = val; } }
+    } catch(e) {
+        const fb=document.getElementById('matrix-feedback'); const msg=fb?fb.querySelector('.message-text'):null; if(fb&&msg){ msg.textContent=`Erro ao carregar matriz: ${e.message}`; fb.style.display='flex'; }
+    }
+}
+
+async function saveCopaMatrixRow(payload){
+    const fb=document.getElementById('matrix-feedback'); const msg=fb?fb.querySelector('.message-text'):null;
+    try{
+        let error=null;
+        if (payload.table === 'copa_scores' || !payload.table){
+            const { data, error: err } = await supabase.from('copa_scores').update({
+                team_a: payload.team_a,
+                team_b: payload.team_b,
+                score_a: payload.score_a,
+                score_b: payload.score_b,
+                status: payload.status,
+                match_time: payload.match_time || null,
+                updated_at: new Date().toISOString()
+            }).eq('id', payload.id).select('id, team_a, team_b, score_a, score_b').limit(1);
+            error = err;
+        } else {
+            const { data, error: err } = await supabase.from('placares_copa').update({
+                time_a: payload.team_a,
+                time_b: payload.team_b,
+                gols_a: payload.score_a,
+                gols_b: payload.score_b,
+                status: payload.status,
+                match_time: payload.match_time || null
+            }).eq('id', payload.id).select('id, time_a, time_b, gols_a, gols_b').limit(1);
+            error = err;
+        }
+        if (!error){
+            if (fb&&msg){ msg.textContent='Matriz salva.'; fb.style.display='flex'; setTimeout(()=>{ fb.style.display='none'; }, 1500); }
+            const id = payload.id;
+            window.copaLastScores = window.copaLastScores || {};
+            window.copaLastScores[id] = { a: Number(payload.score_a||0), b: Number(payload.score_b||0) };
+            checkAndBroadcastBrazilGoal(payload);
+        }
+    } catch(e){ if(fb&&msg){ msg.textContent=`Erro ao salvar: ${e.message}`; fb.style.display='flex'; } }
+}
+
+function toggleCopaMatrixAutoRefresh(on){
+    if (copaMatrixTimer) { clearInterval(copaMatrixTimer); copaMatrixTimer=null; }
+    if (on) { copaMatrixTimer = setInterval(loadCopaMatrix, 15000); }
+}
+
+function addCopaMatrixRow(){
+    const tbody=document.getElementById('copa-matrix-body');
+    if (!tbody) return;
+    const table = window.copaActiveTable || 'copa_scores';
+    const i = tbody.querySelectorAll('tr').length + 1;
+    const trHtml = `
+        <tr data-index="new-${i}" data-id="" data-table="${table}" data-new="1">
+            <td><div class="input-with-icon"><input type="date" class="matrix-date" value="" style="width:140px"><span class="input-icon">📅</span></div></td>
+            <td><div class="input-with-icon"><input type="time" class="matrix-time" value="" style="width:100px"><span class="input-icon">🕒</span></div></td>
+            <td><input type="text" class="matrix-team-a" value="" style="min-width:160px"></td>
+            <td><input type="number" class="matrix-sa" value="0" min="0" style="width:64px"></td>
+            <td><input type="text" class="matrix-team-b" value="" style="min-width:160px"></td>
+            <td><input type="number" class="matrix-sb" value="0" min="0" style="width:64px"></td>
+            <td><select class="matrix-st"><option value="Agendado" selected>Agendado</option><option value="Ao Vivo">Ao Vivo</option><option value="Encerrado">Encerrado</option></select></td>
+            <td><button class="btn btn-secondary" id="remove-row-new-${i}">Remover</button></td>
+        </tr>`;
+    tbody.insertAdjacentHTML('beforeend', trHtml);
+    const tr = tbody.querySelector(`tr[data-index="new-${i}"]`);
+    const removeBtn = tr.querySelector(`#remove-row-new-${i}`);
+    if (removeBtn) removeBtn.addEventListener('click', ()=>{ tr.remove(); });
+}
+
+async function insertOrUpdateCopaRow(payload, targetTr){
+    const fb=document.getElementById('matrix-feedback'); const msg=fb?fb.querySelector('.message-text'):null;
+    try{
+        let error=null;
+        if (!payload.id){
+            if (payload.table === 'placares_copa'){
+                const { data, error: err } = await supabase.from('placares_copa').insert({
+                    time_a: payload.team_a,
+                    time_b: payload.team_b,
+                    gols_a: payload.score_a,
+                    gols_b: payload.score_b,
+                    status: payload.status,
+                    match_time: payload.match_time || null
+                }).select('id');
+                error = err;
+                if (!err && Array.isArray(data) && data[0] && targetTr) targetTr.setAttribute('data-id', String(data[0].id));
+            } else {
+                const { data, error: err } = await supabase.from('copa_scores').insert({
+                    team_a: payload.team_a,
+                    team_b: payload.team_b,
+                    score_a: payload.score_a,
+                    score_b: payload.score_b,
+                    status: payload.status,
+                    match_time: payload.match_time || null
+                }).select('id');
+                error = err;
+                if (!err && Array.isArray(data) && data[0] && targetTr) targetTr.setAttribute('data-id', String(data[0].id));
+            }
+        } else {
+            await saveCopaMatrixRow(payload);
+            return;
+        }
+        if (!error){
+            if(fb&&msg){ msg.textContent='Matriz salva.'; fb.style.display='flex'; setTimeout(()=>{ fb.style.display='none'; }, 1500); }
+            checkAndBroadcastBrazilGoal(payload);
+        }
+    } catch(e){ if(fb&&msg){ msg.textContent=`Erro ao salvar: ${e.message}`; fb.style.display='flex'; } }
+}
+
+async function saveByNaturalKey(payload, targetTr){
+    try{
+        if (payload.table === 'placares_copa'){
+            const up1 = await supabase.from('placares_copa').update({
+                time_a: payload.team_a,
+                time_b: payload.team_b,
+                gols_a: payload.score_a,
+                gols_b: payload.score_b,
+                status: payload.status,
+                match_time: payload.match_time || null,
+                data: payload.dateStr || null,
+                hora: payload.timeStr || null
+            }).eq('time_a', payload.team_a).eq('time_b', payload.team_b).eq('match_time', payload.match_time || null).select('id');
+            const updated = Array.isArray(up1.data) && up1.data.length;
+            if (!updated){
+                const up2 = await supabase.from('placares_copa').update({
+                    time_a: payload.team_a,
+                    time_b: payload.team_b,
+                    gols_a: payload.score_a,
+                    gols_b: payload.score_b,
+                    status: payload.status
+                }).eq('time_a', payload.team_a).eq('time_b', payload.team_b).eq('data', payload.dateStr || '').eq('hora', payload.timeStr || '').select('id');
+                if (!Array.isArray(up2.data) || !up2.data.length){
+                    const ins = await supabase.from('placares_copa').insert({
+                        time_a: payload.team_a,
+                        time_b: payload.team_b,
+                        gols_a: payload.score_a,
+                        gols_b: payload.score_b,
+                        status: payload.status,
+                        match_time: payload.match_time || null,
+                        data: payload.dateStr || null,
+                        hora: payload.timeStr || null
+                    }).select('id');
+                    if (Array.isArray(ins.data) && ins.data[0] && targetTr) targetTr.setAttribute('data-id', String(ins.data[0].id));
+                }
+            }
+        } else {
+            const up = await supabase.from('copa_scores').update({
+                team_a: payload.team_a,
+                team_b: payload.team_b,
+                score_a: payload.score_a,
+                score_b: payload.score_b,
+                status: payload.status,
+                match_time: payload.match_time || null,
+                updated_at: new Date().toISOString()
+            }).eq('team_a', payload.team_a).eq('team_b', payload.team_b).eq('match_time', payload.match_time || null).select('id');
+            if (!Array.isArray(up.data) || !up.data.length){
+                const ins = await supabase.from('copa_scores').insert({
+                    team_a: payload.team_a,
+                    team_b: payload.team_b,
+                    score_a: payload.score_a,
+                    score_b: payload.score_b,
+                    status: payload.status,
+                    match_time: payload.match_time || null
+                }).select('id');
+                if (Array.isArray(ins.data) && ins.data[0] && targetTr) targetTr.setAttribute('data-id', String(ins.data[0].id));
+            }
+        }
+        const fb=document.getElementById('matrix-feedback'); const msg=fb?fb.querySelector('.message-text'):null; if(fb&&msg){ msg.textContent='Partidas salvas com sucesso.'; fb.style.display='flex'; setTimeout(()=>{ fb.style.display='none'; }, 1500); }
+    }catch(e){ const fb=document.getElementById('matrix-feedback'); const msg=fb?fb.querySelector('.message-text'):null; if(fb&&msg){ msg.textContent=`Erro ao salvar: ${e.message}`; fb.style.display='flex'; } }
+}
+
+async function saveCopaMatrixBulk(){
+    const tbody=document.getElementById('copa-matrix-body');
+    if (!tbody) return;
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const tasks = rows.map(async (tr)=>{
+        const id = tr.getAttribute('data-id');
+        const table = tr.getAttribute('data-table') || (window.copaActiveTable || 'copa_scores');
+        const sa = Number(tr.querySelector('.matrix-sa').value||0);
+        const sb = Number(tr.querySelector('.matrix-sb').value||0);
+        const st = tr.querySelector('.matrix-st').value||'';
+        const ta = String(tr.querySelector('.matrix-team-a').value||'');
+        const tb = String(tr.querySelector('.matrix-team-b').value||'');
+        const d = tr.querySelector('.matrix-date').value||'';
+        const t = tr.querySelector('.matrix-time').value||'';
+        const mt = (d && t) ? new Date(`${d}T${t}:00`).toISOString() : null;
+        const payload = { table, id: id || '', team_a: ta, team_b: tb, score_a: sa, score_b: sb, status: st, match_time: mt, dateStr: d, timeStr: t };
+        const key = `${canonicalName(ta)}|${canonicalName(tb)}|${d}|${t}`;
+        const prev = window.copaLastScoresByKey ? window.copaLastScoresByKey[key] : null;
+        const incLocal = prev ? (sa>Number(prev.a)||sb>Number(prev.b)) : ((isBrazilTeam(ta)||isBrazilTeam(tb))&&(sa>0||sb>0));
+        if (incLocal) triggerBrazilGoal();
+        await saveByNaturalKey(payload, tr);
+    });
+    await Promise.all(tasks);
+}
+
+async function deleteCopaMatrixRow(payload){
+    const fb=document.getElementById('matrix-feedback'); const msg=fb?fb.querySelector('.message-text'):null;
+    try{
+        let error=null;
+        if (payload.table === 'placares_copa'){
+            const { error: err } = await supabase.from('placares_copa').delete().eq('id', payload.id);
+            error = err;
+        } else {
+            const { error: err } = await supabase.from('copa_scores').delete().eq('id', payload.id);
+            error = err;
+        }
+        if (!error){ if(fb&&msg){ msg.textContent='Linha removida.'; fb.style.display='flex'; setTimeout(()=>{ fb.style.display='none'; }, 1500); } const tr = document.querySelector(`tr[data-id="${payload.id}"]`); if (tr) tr.remove(); }
+    } catch(e){ if(fb&&msg){ msg.textContent=`Erro ao remover: ${e.message}`; fb.style.display='flex'; } }
+}
+
+function isBrazilTeam(s){ const c = canonicalName(s||''); return c.includes('brasil') || c.includes('brazil'); }
+
+function triggerBrazilGoal(){
+    let el = document.getElementById('goal-overlay');
+    if (!el){
+        el = document.createElement('div');
+        el.id = 'goal-overlay';
+        el.className = 'goal-overlay';
+        el.innerHTML = '<div class="goal-burst"></div><div class="goal-text">GOL DO BRASIL! 🇧🇷</div>';
+        document.body.appendChild(el);
+    }
+    playConfettiOnce({ rainbow:true, count:36, duration:2200 });
+    el.style.display = 'flex';
+    setTimeout(()=>{ el.style.display='none'; }, 2500);
+}
+
+function unifyDateStr(x){ try{ const d = new Date(x); if (!isNaN(d)) return d.toISOString().slice(0,10); const s=String(x||''); const m=s.match(/(\d{4}-\d{2}-\d{2})/); return m?m[1]:''; }catch(_){ return ''; } }
+function unifyTimeStr(x){ try{ const d = new Date(x); if (!isNaN(d)) { const hh=String(d.getHours()).padStart(2,'0'); const mm=String(d.getMinutes()).padStart(2,'0'); return `${hh}:${mm}`; } const s=String(x||''); const m=s.match(/(\d{2}:\d{2})/); return m?m[1]:''; }catch(_){ return ''; } }
+function normalizeMatch(table, r){ const a = table==='placares_copa' ? r.time_a : r.team_a; const b = table==='placares_copa' ? r.time_b : r.team_b; const sa = table==='placares_copa' ? r.gols_a : r.score_a; const sb = table==='placares_copa' ? r.gols_b : r.score_b; const st = r.status; const mt = r.match_time || null; const dateStr = r.data || unifyDateStr(mt); const timeStr = r.hora || unifyTimeStr(mt); return { table, id: r.id||'', team_a: fixAccents(a||''), team_b: fixAccents(b||''), score_a: Number(sa||0), score_b: Number(sb||0), status: fixAccents(st||''), match_time: mt, dateStr, timeStr }; }
+function matchKeyFromRow(x){ const a = canonicalName(x.team_a); const b = canonicalName(x.team_b); const d = x.dateStr || unifyDateStr(x.match_time); const t = x.timeStr || unifyTimeStr(x.match_time); return `${a}|${b}|${d}|${t}`; }
+function dedupeWorldCupRows(rows){ const map = new Map(); rows.forEach(r=>{ const k = matchKeyFromRow(r); if (!map.has(k)) map.set(k, r); }); return Array.from(map.values()); }
+async function fetchWorldCupData(){ try{ const [d1Res,d2Res] = await Promise.all([ supabase.from('copa_scores').select('*'), supabase.from('placares_copa').select('*') ]); const d1 = Array.isArray(d1Res.data) ? d1Res.data.map(r=>normalizeMatch('copa_scores', r)) : []; const d2 = Array.isArray(d2Res.data) ? d2Res.data.map(r=>normalizeMatch('placares_copa', r)) : []; let rows = dedupeWorldCupRows(d1.concat(d2)); if (!rows.length){ try{ const cached = JSON.parse(localStorage.getItem('copa_local_cache')||'[]'); rows = Array.isArray(cached) ? cached : []; }catch(_){ rows=[]; } } else { try{ localStorage.setItem('copa_local_cache', JSON.stringify(rows)); }catch(_){ } } return rows; }catch(_){ try{ const cached = JSON.parse(localStorage.getItem('copa_local_cache')||'[]'); return Array.isArray(cached)?cached:[]; }catch(__){ return []; } } }
+function updateBrazilScoreSnapshot(rows){ window.copaLastScoresByKey = window.copaLastScoresByKey || {}; rows.forEach(r=>{ const k = matchKeyFromRow(r); window.copaLastScoresByKey[k] = { a: Number(r.score_a||0), b: Number(r.score_b||0) }; }); }
+
+function checkAndBroadcastBrazilGoal(payload){
+    try{
+        const ok = isBrazilTeam(payload.team_a) || isBrazilTeam(payload.team_b);
+        if (!ok) return;
+        const prev = payload.id ? (window.copaLastScores && window.copaLastScores[payload.id]) : null;
+        const inc = prev ? (Number(payload.score_a)>Number(prev.a) || Number(payload.score_b)>Number(prev.b)) : (Number(payload.score_a)>0 || Number(payload.score_b)>0);
+        if (!inc) return;
+        triggerBrazilGoal();
+        const ch = window.wcBroadcastChannel;
+        if (ch) ch.send({ type: 'broadcast', event: 'gol_brasil', payload: { id: payload.id||'', a: payload.team_a, b: payload.team_b, sa: payload.score_a, sb: payload.score_b, ts: Date.now() } });
+    }catch(_){ }
+}
+
+function subscribeWorldCupRealtime(){
+    if (!window.supabase) return;
+    if (window.copaRealtimeSubscribed) return;
+    window.copaRealtimeSubscribed = true;
+    const onChange = (payload)=>{
+        const n = payload.new || payload;
+        const id = n.id;
+        const aName = n.team_a !== undefined ? n.team_a : n.time_a;
+        const bName = n.team_b !== undefined ? n.team_b : n.time_b;
+        const sa = n.score_a !== undefined ? n.score_a : n.gols_a;
+        const sb = n.score_b !== undefined ? n.score_b : n.gols_b;
+        const prev = (window.copaLastScores && id) ? window.copaLastScores[id] : null;
+        const inc = prev ? (Number(sa)>Number(prev.a) || Number(sb)>Number(prev.b)) : (Number(sa)>0 || Number(sb)>0);
+        const ok = isBrazilTeam(aName) || isBrazilTeam(bName);
+        if (ok && inc) triggerBrazilGoal();
+        if (id){ window.copaLastScores = window.copaLastScores || {}; window.copaLastScores[id] = { a: Number(sa||0), b: Number(sb||0) }; }
+        try{ if (window.refreshWorldCupScorebar) window.refreshWorldCupScorebar(); }catch(_){ }
+        try{ if (window.refreshBrazilMatchBanner) window.refreshBrazilMatchBanner(); }catch(_){ }
+    };
+    supabase.channel('copa_scores_rt').on('postgres_changes',{event:'*',schema:'public',table:'copa_scores'},onChange).subscribe();
+    supabase.channel('placares_copa_rt').on('postgres_changes',{event:'*',schema:'public',table:'placares_copa'},onChange).subscribe();
+    window.wcBroadcastChannel = supabase.channel('wc-broadcast');
+    window.wcBroadcastChannel.on('broadcast', { event: 'gol_brasil' }, ()=>{ triggerBrazilGoal(); }).subscribe();
+}
+
+        function canonicalName(s){
+            return fixAccents(String(s||''))
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g,'')
+                .replace(/\s+/g,' ')
+                .trim();
+        }
+
+        async function importCopaCsv(rows) {
+            const feedback = document.getElementById('csv-feedback');
+            const msg = feedback ? feedback.querySelector('.message-text') : null;
+            try {
+                const { data: existingAll } = await supabase
+                    .from('copa_scores')
+                    .select('id, team_a, team_b, score_a, score_b, status, match_time');
+                const map = new Map();
+                (existingAll||[]).forEach(e => {
+                    const k = canonicalName(e.team_a) + '|' + canonicalName(e.team_b);
+                    const k2 = canonicalName(e.team_b) + '|' + canonicalName(e.team_a);
+                    if (!map.has(k)) map.set(k, e);
+                    if (!map.has(k2)) map.set(k2, e);
+                });
+                let inserted = 0, updated = 0, skipped = 0;
+                for (const r of rows) {
+                    const aFix = fixAccents(r.team_a);
+                    const bFix = fixAccents(r.team_b);
+                    const stFix = fixAccents(r.status);
+                    const key = canonicalName(aFix) + '|' + canonicalName(bFix);
+                    const ex = map.get(key);
+                    if (ex) {
+                        const changed = (Number(ex.score_a) !== Number(r.score_a)) ||
+                                       (Number(ex.score_b) !== Number(r.score_b)) ||
+                                       (String(ex.status||'') !== String(stFix||'')) ||
+                                       (String(ex.match_time||'') !== String(r.match_time||''));
+                        if (!changed) { skipped++; continue; }
+                        const { error } = await supabase.from('copa_scores').update({
+                            team_a: aFix,
+                            team_b: bFix,
+                            score_a: r.score_a,
+                            score_b: r.score_b,
+                            status: stFix,
+                            match_time: r.match_time || null,
+                            updated_at: new Date().toISOString()
+                        }).eq('id', ex.id);
+                        if (!error) updated++;
+                    } else {
+                        const { error } = await supabase.from('copa_scores').insert({
+                            team_a: aFix,
+                            team_b: bFix,
+                            score_a: r.score_a,
+                            score_b: r.score_b,
+                            status: stFix,
+                            match_time: r.match_time || null
+                        });
+                        if (!error) inserted++;
+                    }
+                }
+                if (feedback && msg) {
+                    msg.textContent = `Importação concluída: ${inserted} inseridos, ${updated} atualizados, ${skipped} ignorados.`;
+                    feedback.style.display = 'flex';
+                }
+            } catch (err) {
+                if (feedback && msg) {
+                    msg.textContent = `Falha na importação: ${err.message}`;
+                    feedback.style.display = 'flex';
+                }
+            }
         }
 
         async function fetchStatusLogs({ from, to, usuario, offset = 0, pageSize = LOGS_PAGE_SIZE }) {
@@ -12241,15 +13115,51 @@ function getEscalonamento(tab, dias, revenda) {
                 } catch(_) { return String(v); }
             }
 
-            container.innerHTML = notificacoes.map(notificacao => `
+            container.innerHTML = notificacoes.map((notificacao, idx) => `
                 <div class="alert-item">
                     <div class="alert-info">
                         <strong>${notificacao.titulo}</strong><br>
                         <small>Para: ${notificacao.destinatario} | ${formatarDataBr(notificacao.data)} | ${notificacao.enviado ? 'Enviado' : 'Falha no envio'}</small>
                         <p>${notificacao.mensagem}</p>
                     </div>
+                    ${notificacao.enviado ? '' : `<div class="alert-actions"><button class="btn btn-primary btn-sm" data-idx="${idx}" onclick="reenviarNotificacao(${idx})">Reenviar</button></div>`}
                 </div>
             `).join('');
+        }
+
+        async function reenviarNotificacao(index){
+            try{
+                const lista = await fetchHistoricoNotificacoesSupabase(100);
+                const n = lista[index];
+                if (!n) return;
+                const body = formatMessageForSend(n.mensagem);
+                const r = await enviarEmailReal(n.destinatario, n.titulo, body);
+                const reg = { tipo: String(n.tipo||'reenvio_manual'), titulo: n.titulo, mensagem: body, destinatario: n.destinatario, usuario: n.usuario, enviado: !!r.success, erro: r.error || null, quantidadeOS: Number(n.quantidadeOS || n.quantidadeos || 0) };
+                await insertHistoricoNotificacaoSupabase(reg);
+                const atual = await fetchHistoricoNotificacoesSupabase();
+                renderHistoricoAlertas(atual);
+            } catch(_) {}
+        }
+
+        function formatMessageForSend(raw){
+            try{
+                let s = String(raw||'');
+                s = s.replace(/\s*FP\[os=[^\]]*\]\s*/gi, '').trim();
+                s = s.replace(/\s*Atencios?amente[,]?\s*\n?\s*Sistema de Controle de OS\s*$/i, '').trim();
+                const isHtml = /<\w+[^>]*>/.test(s);
+                if (!isHtml){
+                    s = s + "\n\n<b>Atenciosamente,</b>\nSistema de Controle de OS";
+                    s = s.replace(/\n/g,'<br>');
+                    return `<div>${s}</div>`;
+                }
+                if (!/Atenciosamente/i.test(s)){
+                    s += `<p><strong>Atenciosamente,</strong><br>Sistema de Controle de OS</p>`;
+                } else {
+                    s = s.replace(/Atencios?amente[,]?/i, '<strong>Atenciosamente,</strong>');
+                    if (!/Sistema de Controle de OS/i.test(s)) s += `<br>Sistema de Controle de OS`;
+                }
+                return s;
+            } catch(_) { return raw; }
         }
 
         async function showUserEventNotificationsIfAny() {
