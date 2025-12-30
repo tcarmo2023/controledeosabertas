@@ -10739,6 +10739,11 @@ function subscribeWorldCupRealtime(){
                 if (isBruna && String(tabKey).toLowerCase()==='interna') {
                     return Array.from(new Set(arr.concat(['3'])));
                 }
+                // Regra especial: Isabelle pode ver Externa de Fortaleza (revenda 3)
+                const isIsabelle = v.includes('isabelle');
+                if (isIsabelle && String(tabKey).toLowerCase()==='externa') {
+                    return Array.from(new Set(arr.concat(['3'])));
+                }
                 return arr;
             }
             const allowedRevendas = currentUser ? getAllowedRevendasForUserTab(currentUser, tab) : [];
@@ -10802,6 +10807,9 @@ function subscribeWorldCupRealtime(){
                     
                     // Verifica se a OS está atualmente com o usuário
                     const isCurrentlyWithUser = escNorm === userEscNorm;
+                    // Alternativa: Consultor da OS corresponde ao usuário
+                    const consultorNorm = normalizeNomeResponsavel(os.Consultor || '');
+                    const isConsultorUser = !!consultorNorm && consultorNorm.includes(userEscNorm);
                     
                     // Verifica se a OS já pertenceu ao usuário (saiu dele)
                     let hasBelongedToUser = false;
@@ -10875,7 +10883,7 @@ function subscribeWorldCupRealtime(){
                     const osRevenda = String(os.Revenda || '');
                     const inAllowedRevendas = allowedRevendas.includes(osRevenda);
                     // Permite visualização se a OS está atualmente com o usuário, já foi dele, ou está em revenda permitida
-                    if (!isCurrentlyWithUser && !hasBelongedToUser && !inAllowedRevendas) {
+                    if (!isCurrentlyWithUser && !isConsultorUser && !hasBelongedToUser && !inAllowedRevendas) {
                         return false;
                     }
                 }
@@ -11185,6 +11193,37 @@ function getEscalonamento(tab, dias, revenda) {
                             </div>
                             <button class="btn btn-primary" id="btn-perm-aplicar">Aplicar permissão</button>
                         </div>
+                        <div id="revenda-perm-panel" class="perm-panel" style="margin-left:16px;">
+                            <label class="perm-title">Permissões por Revenda</label>
+                            <div>
+                                <label style="font-weight:600; font-size:12px;">Aba</label>
+                                <select id="revenda-perm-tab" class="filter-select" style="min-width:160px;">
+                                    <option value="externa">Externa</option>
+                                    <option value="interna">Interna</option>
+                                    <option value="garantia">Garantia</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-weight:600; font-size:12px;">Revendas</label>
+                                <select id="revenda-perm-revs" class="filter-select" multiple style="min-width:160px;">
+                                    <option value="1">Recife</option>
+                                    <option value="2">Natal</option>
+                                    <option value="3">Fortaleza</option>
+                                    <option value="4">Petrolina</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-weight:600; font-size:12px;">Visualizador</label>
+                                <select id="revenda-perm-viewer" class="filter-select" style="min-width:160px;">
+                                    ${users.map(u=>`<option value="${u}">${u}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <button class="btn" id="btn-revenda-perm-grant">Aplicar revendas</button>
+                                <button class="btn" id="btn-revenda-perm-revoke">Revogar revendas</button>
+                                <div id="revenda-perm-status" style="font-weight:600;"></div>
+                            </div>
+                        </div>
                     </div>`;
                 content.innerHTML = `
                     <h3 style="margin:0 0 12px 0">Permissões de visualização</h3>
@@ -11258,6 +11297,42 @@ function getEscalonamento(tab, dias, revenda) {
                     ` : '';
                     const sum = content.querySelector('#perm-summary');
                     if (sum) sum.innerHTML = userOut && viewer ? `Visualizador <strong>${viewer}</strong> pode ver <strong>${userOut}</strong> em: ${chips}` : '';
+                    updateRevendaPermStatusUI();
+                }
+                function saveRevendaPermMap(map){ try { localStorage.setItem('revendaPermMap', JSON.stringify(map)); } catch(_) {} }
+                function grantRevendasForViewerTab(viewer, tabKey, revs){
+                    const v = normalizeNomeResponsavel(viewer||'');
+                    const t = String(tabKey||'').toLowerCase();
+                    const map = loadRevendaPermMap();
+                    const cur = Array.isArray(((map[v]||{})[t])) ? ((map[v]||{})[t]) : [];
+                    const next = Array.from(new Set(cur.concat((Array.isArray(revs)?revs:[]).map(r=>String(r)))));
+                    map[v] = map[v] || {};
+                    map[v][t] = next;
+                    saveRevendaPermMap(map);
+                }
+                function revokeRevendasForViewerTab(viewer, tabKey, revs){
+                    const v = normalizeNomeResponsavel(viewer||'');
+                    const t = String(tabKey||'').toLowerCase();
+                    const map = loadRevendaPermMap();
+                    const cur = Array.isArray(((map[v]||{})[t])) ? ((map[v]||{})[t]) : [];
+                    const rem = (Array.isArray(revs)?revs:[]).map(r=>String(r));
+                    const next = cur.filter(r=>!rem.includes(String(r)));
+                    map[v] = map[v] || {};
+                    map[v][t] = next;
+                    saveRevendaPermMap(map);
+                }
+                function getSelectedRevendas(){
+                    const sel = content.querySelector('#revenda-perm-revs');
+                    return sel ? Array.from(sel.selectedOptions).map(o=>String(o.value)) : [];
+                }
+                function updateRevendaPermStatusUI(){
+                    const viewer = content.querySelector('#revenda-perm-viewer')?.value || '';
+                    const tabKey = content.querySelector('#revenda-perm-tab')?.value || 'externa';
+                    const statusEl = content.querySelector('#revenda-perm-status');
+                    if (!statusEl) return;
+                    const allowed = getAllowedRevendasForUserTab({ nome_completo: viewer }, tabKey) || [];
+                    const chips = allowed.length ? allowed.map(r=>`<span class="chip">${revendasMap[String(r)]||String(r)}</span>`).join(' ') : '<span class="chip chip-none">nenhuma</span>';
+                    statusEl.innerHTML = `Revendas: ${chips}`;
                 }
                 async function ensureTipoData(tipoKey){
                     const map = { externa: 'Externa', interna: 'Interna', garantia: 'Garantia' };
@@ -11657,6 +11732,10 @@ function getEscalonamento(tab, dias, revenda) {
                 if (viewerEl) viewerEl.addEventListener('change', ()=>{ updatePermStatusUI(); renderPermResults(); });
                 const tipoEl = content.querySelector('#perm-tipo');
                 if (tipoEl) tipoEl.addEventListener('change', ()=>{ renderPermResults(); });
+                const revViewerEl = content.querySelector('#revenda-perm-viewer');
+                if (revViewerEl) revViewerEl.addEventListener('change', ()=>{ updateRevendaPermStatusUI(); });
+                const revTabEl = content.querySelector('#revenda-perm-tab');
+                if (revTabEl) revTabEl.addEventListener('change', ()=>{ updateRevendaPermStatusUI(); });
                 content.addEventListener('click', (e)=>{
                     const tgt = e.target;
                     if (!tgt || !tgt.id) return;
@@ -11670,9 +11749,22 @@ function getEscalonamento(tab, dias, revenda) {
                         if (allow==='sim') grantPermForTipo(viewerSel, owner, tipo); else revokePermForTipo(viewerSel, owner, tipo);
                         updatePermStatusUI();
                         renderPermResults();
+                    } else if (tgt.id==='btn-revenda-perm-grant') {
+                        const viewerSel = content.querySelector('#revenda-perm-viewer')?.value || '';
+                        const tabKey = content.querySelector('#revenda-perm-tab')?.value || 'externa';
+                        const revs = getSelectedRevendas();
+                        grantRevendasForViewerTab(viewerSel, tabKey, revs);
+                        updateRevendaPermStatusUI();
+                    } else if (tgt.id==='btn-revenda-perm-revoke') {
+                        const viewerSel = content.querySelector('#revenda-perm-viewer')?.value || '';
+                        const tabKey = content.querySelector('#revenda-perm-tab')?.value || 'externa';
+                        const revs = getSelectedRevendas();
+                        revokeRevendasForViewerTab(viewerSel, tabKey, revs);
+                        updateRevendaPermStatusUI();
                     }
                 });
                 updatePermStatusUI();
+                updateRevendaPermStatusUI();
                 renderPermResults();
             } catch(_) {}
         }
