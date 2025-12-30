@@ -4559,8 +4559,21 @@
                             msgHtml += `<li><strong>OS ${os['Numero OS']}</strong> - ${os.Cliente || 'N/A'} <em>(Tipo: ${os.Tipo || '—'})</em><br><small>Responsável anterior: ${anterior} • Dias em aberto: ${dias} dias</small></li>`;
                         });
                         msgHtml += `</ul><p>Por favor, assuma a responsabilidade por estas OS.</p><p><strong>Atenciosamente,</strong><br>Sistema de Controle de OS</p>`;
-                        const skip = await shouldSkipNotificationByOSSet({ tipo: 'nova_os_escalonada', usuario: alerta.usuario, destinatario: alerta.email, osNumbers: setAll, windowMinutes: null })
+                        try {
+                            const regPre = { tipo: 'nova_os_escalonada_pre', titulo, mensagem: `${msgText}\nFP[os=${fpAll}]`, destinatario: alerta.email, usuario: alerta.usuario, enviado: false, erro: null, quantidadeOS: setAll.length };
+                            await insertHistoricoNotificacaoSupabase(regPre);
+                        } catch(_) {}
+                        let skip = await shouldCooldownAnySend({ usuario: alerta.usuario, destinatario: alerta.email, minutes: 60 })
+                            || await isUserSendLocked({ tipo: 'nova_os_escalonada', usuario: alerta.usuario, windowMinutes: 1 })
+                            || await shouldSkipNotificationByOSSet({ tipo: 'nova_os_escalonada', usuario: alerta.usuario, destinatario: alerta.email, osNumbers: setAll, windowMinutes: null })
                             || await shouldSkipNotification({ tipo: 'nova_os_escalonada', usuario: alerta.usuario, destinatario: alerta.email, titulo, mensagem: msgText, windowMinutes: 180 });
+                        if (!skip) {
+                            setUserSendLock({ tipo: 'nova_os_escalonada', usuario: alerta.usuario });
+                            await sleep(300 + Math.floor(Math.random()*700));
+                            const recheck = await shouldSkipNotificationByOSSet({ tipo: 'nova_os_escalonada', usuario: alerta.usuario, destinatario: alerta.email, osNumbers: setAll, windowMinutes: null })
+                                || await shouldSkipNotification({ tipo: 'nova_os_escalonada', usuario: alerta.usuario, destinatario: alerta.email, titulo, mensagem: msgText, windowMinutes: 180 });
+                            if (recheck) skip = true;
+                        }
                         const resultadoEnvio = skip ? { success: false, error: 'duplicate-skip' } : await enviarEmailReal(alerta.email, titulo, msgHtml);
                         const registro = { tipo: 'nova_os_escalonada', titulo, mensagem: `${msgText}\nFP[os=${fpAll}]`, destinatario: alerta.email, usuario: alerta.usuario, enviado: !!resultadoEnvio.success, erro: resultadoEnvio.error || null, quantidadeOS: novas.length };
                         await insertHistoricoNotificacaoSupabase(registro);
@@ -6347,6 +6360,9 @@
                 const transferTab = document.querySelector('.tab[data-tab="transferencia-escalonamento"]');
                 const logsTab = document.getElementById('tab-logs-status');
                 const cadTab = document.getElementById('tab-cadastro-usuarios');
+                const temaTab = document.getElementById('tab-tema');
+                const copaTab = document.querySelector('.tab[data-tab="copa-tabela"]');
+                const usuariosTemaTab = document.querySelector('.tab[data-tab="usuarios-tema"]');
 
                 // Obter referências para os conteúdos das abas
                 const externaContent = document.getElementById('externa');
@@ -6362,11 +6378,14 @@
                 const transferContent = document.getElementById('transferencia-escalonamento');
                 const logsContent = document.getElementById('logs-status');
                 const cadContent = document.getElementById('cadastro-usuarios');
+                const temaContent = document.getElementById('tema');
+                const copaContent = document.getElementById('copa-tabela');
+                const usuariosTemaContent = document.getElementById('usuarios-tema');
 
                 if (isAdmin) {
                     // Administrador: vê todas as abas
                     [externaTab, internaTab, garantiaTab, atualizacaoTab, atualizarValoresTab, atualizarObsTab, importacaoTab,
-                     dashboardTab, alertaTab, statusTab, transferTab, logsTab, cadTab].forEach(tab => {
+                     dashboardTab, alertaTab, statusTab, transferTab, logsTab, cadTab, temaTab, copaTab, usuariosTemaTab].forEach(tab => {
                         if (tab) tab.style.display = '';
                     });
                     acessoAlertasLiberado = true;
@@ -6376,7 +6395,7 @@
                         if (tab) tab.style.display = '';
                     });
                     // Oculta Gerenciar Status para gestor e demais abas restritas; mantém Atualização se liberada
-                    [statusTab, (canUseAtualizacao ? null : atualizacaoTab), atualizarValoresTab, atualizarObsTab, importacaoTab, cadTab].forEach(tab => {
+                    [statusTab, (canUseAtualizacao ? null : atualizacaoTab), atualizarValoresTab, atualizarObsTab, importacaoTab, cadTab, temaTab, copaTab, usuariosTemaTab].forEach(tab => {
                         if (tab) tab.style.display = 'none';
                     });
                     // Se a tab atual foi ocultada, voltar para Externa (não troca se Atualização estiver liberada)
@@ -6396,7 +6415,7 @@
                         if (tab) tab.style.display = '';
                     });
                     // Oculta demais abas; mantém Atualização visível se em whitelist
-                    [statusTab, (canUseAtualizacao ? null : atualizacaoTab), atualizarValoresTab, atualizarObsTab, importacaoTab, alertaTab, transferTab, logsTab, cadTab].forEach(tab => {
+                    [statusTab, (canUseAtualizacao ? null : atualizacaoTab), atualizarValoresTab, atualizarObsTab, importacaoTab, alertaTab, transferTab, logsTab, cadTab, temaTab, copaTab, usuariosTemaTab].forEach(tab => {
                         if (tab) tab.style.display = 'none';
                     });
                     // Se a tab atual foi ocultada, voltar para Externa
@@ -6416,7 +6435,7 @@
                         if (tab) tab.style.display = '';
                     });
                     // Oculta Gerenciar Status para usuário padrão
-                    [statusTab, atualizacaoTab, atualizarValoresTab, importacaoTab, alertaTab, transferTab, logsTab, cadTab].forEach(tab => {
+                    [statusTab, atualizacaoTab, atualizarValoresTab, importacaoTab, alertaTab, transferTab, logsTab, cadTab, temaTab, copaTab, usuariosTemaTab].forEach(tab => {
                         if (tab) tab.style.display = 'none';
                     });
                     // Se a tab atual foi ocultada, voltar para Externa
@@ -6434,7 +6453,7 @@
                 if (manualCtl) manualCtl.style.display = (user && user.usuario === 'thiago.carmo') ? '' : 'none';
 
                 // Garantir que os conteúdos das abas ocultas também sejam desativados
-                [atualizacaoContent, atualizarValoresContent, importacaoContent, alertaContent, statusContent, transferContent, logsContent, cadContent].forEach(content => {
+                [atualizacaoContent, atualizarValoresContent, importacaoContent, alertaContent, statusContent, transferContent, logsContent, cadContent, temaContent, copaContent, usuariosTemaContent].forEach(content => {
                     if (content) content.classList.remove('active');
                 });
 
@@ -10709,8 +10728,23 @@ function subscribeWorldCupRealtime(){
             };
             const userEscNorm = restrictByUser ? normalize(getUserEscLabel(currentUser?.nome_completo || '')) : '';
 
+            // Permissão por revenda/tab via localStorage
+            function loadRevendaPermMap(){ try { return JSON.parse(localStorage.getItem('revendaPermMap')||'{}'); } catch(_) { return {}; } }
+            function getAllowedRevendasForUserTab(user, tabKey){
+                const map = loadRevendaPermMap();
+                const v = normalizeNomeResponsavel((user?.nome_completo || user?.usuario || ''));
+                const arr = (((map[v]||{})[String(tabKey).toLowerCase()])||[]).map(r => String(r));
+                // Regra especial: Bruna pode ver Interna de Fortaleza (revenda 3)
+                const isBruna = v.includes('bruna');
+                if (isBruna && String(tabKey).toLowerCase()==='interna') {
+                    return Array.from(new Set(arr.concat(['3'])));
+                }
+                return arr;
+            }
+            const allowedRevendas = currentUser ? getAllowedRevendasForUserTab(currentUser, tab) : [];
+
             return data.filter(os => {
-                // Filtro de revenda (múltipla seleção) - CORREÇÃO MELHORADA
+                // Filtro de revenda (múltipla seleção) e permissões por revenda
                 if (selectedRevendas.length > 0) {
                     // Converte ambos os valores para string para garantir compatibilidade
                     const osRevenda = String(os.Revenda || '');
@@ -10719,6 +10753,9 @@ function subscribeWorldCupRealtime(){
                     if (!hasMatchingRevenda) {
                         return false;
                     }
+                } else if (restrictByUser && allowedRevendas && allowedRevendas.length > 0) {
+                    const osRevenda = String(os.Revenda || '');
+                    if (!allowedRevendas.includes(osRevenda)) return false;
                 }
                 
                 if (nroOs && (os['Numero OS'] || '').toString().toLowerCase() !== nroOs.toLowerCase()) return false;
@@ -10758,7 +10795,7 @@ function subscribeWorldCupRealtime(){
                     const consMatch = consNorm.includes(fNorm);
                     if (!matchCurrent && !matchPrev && !consMatch) return false;
                 }
-                // Modificado: Permite que usuários vejam OS que estão com eles E que saíram deles
+                // Modificado: Permite que usuários vejam OS que estão com eles, que já saíram deles, ou que pertencem às revendas permitidas
                 if (restrictByUser) {
                     const escNorm = normalize(escCalc);
                     const userEscNorm = normalize(getUserEscLabel(currentUser?.nome_completo || ''));
@@ -10835,8 +10872,10 @@ function subscribeWorldCupRealtime(){
                         }
                     }
                     
-                    // Permite visualização se a OS está atualmente com o usuário OU já foi dele
-                    if (!isCurrentlyWithUser && !hasBelongedToUser) {
+                    const osRevenda = String(os.Revenda || '');
+                    const inAllowedRevendas = allowedRevendas.includes(osRevenda);
+                    // Permite visualização se a OS está atualmente com o usuário, já foi dele, ou está em revenda permitida
+                    if (!isCurrentlyWithUser && !hasBelongedToUser && !inAllowedRevendas) {
                         return false;
                     }
                 }
