@@ -10677,6 +10677,28 @@ function subscribeWorldCupRealtime(){
             }
         }
 
+        if (typeof window.loadRevendaPermMap !== 'function') {
+            window.loadRevendaPermMap = function(){
+                try { return JSON.parse(localStorage.getItem('revendaPermMap')||'{}'); } catch(_) { return {}; }
+            }
+        }
+        if (typeof window.getAllowedRevendasForUserTab !== 'function') {
+            window.getAllowedRevendasForUserTab = function(user, tabKey){
+                const map = loadRevendaPermMap();
+                const v = normalizeNomeResponsavel((user?.nome_completo || user?.usuario || ''));
+                const arr = (((map[v]||{})[String(tabKey).toLowerCase()])||[]).map(r => String(r));
+                const isBruna = v.includes('bruna');
+                if (isBruna && String(tabKey).toLowerCase()==='interna') {
+                    return Array.from(new Set(arr.concat(['3'])));
+                }
+                const isIsabelle = v.includes('isabelle');
+                if (isIsabelle && String(tabKey).toLowerCase()==='externa') {
+                    return Array.from(new Set(arr.concat(['3'])));
+                }
+                return arr;
+            }
+        }
+
         function applyFilters(tab, data) {
             const revendaSelect = document.getElementById(`filter-revenda-${tab}`);
             const nroEl = document.getElementById(`filter-nro-os-${tab}`);
@@ -10728,24 +10750,6 @@ function subscribeWorldCupRealtime(){
             };
             const userEscNorm = restrictByUser ? normalize(getUserEscLabel(currentUser?.nome_completo || '')) : '';
 
-            // Permissão por revenda/tab via localStorage
-            function loadRevendaPermMap(){ try { return JSON.parse(localStorage.getItem('revendaPermMap')||'{}'); } catch(_) { return {}; } }
-            function getAllowedRevendasForUserTab(user, tabKey){
-                const map = loadRevendaPermMap();
-                const v = normalizeNomeResponsavel((user?.nome_completo || user?.usuario || ''));
-                const arr = (((map[v]||{})[String(tabKey).toLowerCase()])||[]).map(r => String(r));
-                // Regra especial: Bruna pode ver Interna de Fortaleza (revenda 3)
-                const isBruna = v.includes('bruna');
-                if (isBruna && String(tabKey).toLowerCase()==='interna') {
-                    return Array.from(new Set(arr.concat(['3'])));
-                }
-                // Regra especial: Isabelle pode ver Externa de Fortaleza (revenda 3)
-                const isIsabelle = v.includes('isabelle');
-                if (isIsabelle && String(tabKey).toLowerCase()==='externa') {
-                    return Array.from(new Set(arr.concat(['3'])));
-                }
-                return arr;
-            }
             const allowedRevendas = currentUser ? getAllowedRevendasForUserTab(currentUser, tab) : [];
 
             return data.filter(os => {
