@@ -246,6 +246,11 @@
         .theme-banner { display: inline-block; position: relative; width: 300px; height: 60px; overflow: hidden; padding-right: 28px; }
         .theme-banner img { position: absolute; top: 50%; right: 28px; transform: translateY(-50%); height: 60px; width: auto; }
         .theme-banner .janeiro-banner { height: 60px; transform: translateY(-50%) scale(1.0); }
+        .theme-banner .outubro-banner { height: 60px; transform: translateY(-50%) scale(1.0); }
+        .theme-banner .novembro-banner { height: 60px; transform: translateY(-50%) scale(1.25); }
+        .theme-banner .setembro-banner { height: 60px; transform: translateY(-50%) scale(1.25); }
+        .theme-banner .maio-banner { height: 60px; transform: translateY(-50%) scale(1.0); }
+        :root.theme-setembro-amarelo .theme-banner { height: 72px; overflow: visible; }
         :root.theme-janeiro-branco .right-info *, :root.theme-janeiro-branco .right-info { color: #1f1f1f !important; }
         :root.theme-janeiro-branco #user-info-container { background: rgba(255,255,255,0.85) !important; border: 1px solid rgba(0,0,0,0.12) !important; }
         :root.theme-janeiro-branco .user-welcome, :root.theme-janeiro-branco .user-name { color: #1f1f1f !important; }
@@ -253,7 +258,35 @@
         :root.theme-janeiro-branco .datetime-container .current-date, 
         :root.theme-janeiro-branco .datetime-container .current-day { color: #1f1f1f !important; }
         :root.theme-janeiro-branco .right-top-row > span { color: #888 !important; }
-        @media (max-width: 768px) { .theme-banner { width: 200px; height: 48px; padding-right: 12px; overflow: hidden; } .theme-banner img, .theme-banner .janeiro-banner { height: 48px; transform: translateY(-50%) scale(1.0); right: 12px; } }
+        :root.theme-outubro-rosa .right-info *, :root.theme-outubro-rosa .right-info { color: #1f1f1f !important; }
+        :root.theme-outubro-rosa #user-info-container { background: rgba(255,255,255,0.85) !important; border: 1px solid rgba(0,0,0,0.12) !important; }
+        :root.theme-outubro-rosa .user-welcome, :root.theme-outubro-rosa .user-name { color: #1f1f1f !important; }
+        :root.theme-outubro-rosa .datetime-container .current-time, 
+        :root.theme-outubro-rosa .datetime-container .current-date, 
+        :root.theme-outubro-rosa .datetime-container .current-day { color: #1f1f1f !important; }
+        :root.theme-outubro-rosa .right-top-row > span { color: #888 !important; }
+        @media (max-width: 768px) { .theme-banner { width: 200px; height: 48px; padding-right: 12px; overflow: hidden; } .theme-banner img, .theme-banner .janeiro-banner, .theme-banner .outubro-banner, .theme-banner .novembro-banner, .theme-banner .setembro-banner, .theme-banner .maio-banner { height: 48px; transform: translateY(-50%) scale(1.0); right: 12px; } :root.theme-setembro-amarelo .theme-banner { height: 54px; overflow: visible; } :root.theme-setembro-amarelo .theme-banner .setembro-banner { height: 54px; transform: translateY(-50%) scale(1.15); } }
+        :root.theme-maio-laranja .right-info *, :root.theme-maio-laranja .right-info { color: #1f1f1f !important; }
+        :root.theme-maio-laranja #user-info-container { background: rgba(255,255,255,0.85) !important; border: 1px solid rgba(0,0,0,0.12) !important; }
+        :root.theme-maio-laranja .user-welcome, :root.theme-maio-laranja .user-name { color: #1f1f1f !important; }
+        :root.theme-maio-laranja .datetime-container .current-time,
+        :root.theme-maio-laranja .datetime-container .current-date,
+        :root.theme-maio-laranja .datetime-container .current-day { color: #1f1f1f !important; }
+        :root.theme-maio-laranja .right-top-row > span { color: #888 !important; }
+        :root.theme-setembro-amarelo .right-info *, :root.theme-setembro-amarelo .right-info { color: #1f1f1f !important; }
+        :root.theme-setembro-amarelo #user-info-container { background: rgba(255,255,255,0.85) !important; border: 1px solid rgba(0,0,0,0.12) !important; }
+        :root.theme-setembro-amarelo .user-welcome, :root.theme-setembro-amarelo .user-name { color: #1f1f1f !important; }
+        :root.theme-setembro-amarelo .datetime-container .current-time,
+        :root.theme-setembro-amarelo .datetime-container .current-date,
+        :root.theme-setembro-amarelo .datetime-container .current-day { color: #1f1f1f !important; }
+        :root.theme-setembro-amarelo .right-top-row > span { color: #888 !important; }
+        :root.theme-novembro-azul .right-info *, :root.theme-novembro-azul .right-info { color: #1f1f1f !important; }
+        :root.theme-novembro-azul #user-info-container { background: rgba(255,255,255,0.85) !important; border: 1px solid rgba(0,0,0,0.12) !important; }
+        :root.theme-novembro-azul .user-welcome, :root.theme-novembro-azul .user-name { color: #1f1f1f !important; }
+        :root.theme-novembro-azul .datetime-container .current-time,
+        :root.theme-novembro-azul .datetime-container .current-date,
+        :root.theme-novembro-azul .datetime-container .current-day { color: #1f1f1f !important; }
+        :root.theme-novembro-azul .right-top-row > span { color: #888 !important; }
         
         .datetime-container {
             display: flex;
@@ -6268,14 +6301,34 @@
                 saojoao: '🔥 Viva São João',
                 criancas: '🎈 Feliz Dia das Crianças',
                 copa: '⚽ Copa do Mundo',
-                outubro_rosa: '🎗 Outubro Rosa',
-                novembro_azul: '🎗 Novembro Azul',
+                outubro_rosa: '',
+                novembro_azul: '',
                 setembro_amarelo: '🎗 Setembro Amarelo',
                 janeiro_branco: '',
-                maio_laranja: '🎗 Maio Laranja'
+                maio_laranja: ''
             };
             if (theme === 'janeiro_branco') {
                 banner.innerHTML = '<img class="janeiro-banner" src="https://raw.githubusercontent.com/tcarmo2023/fotos/8268724105a0bb1435fb9f98c1037577ac1f1582/NOVO-removebg-preview.png" alt="Janeiro Branco" />';
+                banner.style.display = 'inline-block';
+                banner.style.fontSize = '';
+                banner.style.fontWeight = '';
+            } else if (theme === 'outubro_rosa') {
+                banner.innerHTML = '<img class="outubro-banner" src="https://raw.githubusercontent.com/tcarmo2023/fotos/72741f24cb09fb3fea3d78007ce50feb42ceecd0/Outubro_Rosa-removebg-preview.png" alt="Outubro Rosa" />';
+                banner.style.display = 'inline-block';
+                banner.style.fontSize = '';
+                banner.style.fontWeight = '';
+            } else if (theme === 'novembro_azul') {
+                banner.innerHTML = '<img class="novembro-banner" src="https://raw.githubusercontent.com/tcarmo2023/fotos/72741f24cb09fb3fea3d78007ce50feb42ceecd0/Novembro_Azul-removebg-preview.png" alt="Novembro Azul" />';
+                banner.style.display = 'inline-block';
+                banner.style.fontSize = '';
+                banner.style.fontWeight = '';
+            } else if (theme === 'setembro_amarelo') {
+                banner.innerHTML = '<img class="setembro-banner" src="https://raw.githubusercontent.com/tcarmo2023/fotos/72741f24cb09fb3fea3d78007ce50feb42ceecd0/Setembro_Amarelo-removebg-preview.png" alt="Setembro Amarelo" />';
+                banner.style.display = 'inline-block';
+                banner.style.fontSize = '';
+                banner.style.fontWeight = '';
+            } else if (theme === 'maio_laranja') {
+                banner.innerHTML = '<img class="maio-banner" src="https://raw.githubusercontent.com/tcarmo2023/fotos/72741f24cb09fb3fea3d78007ce50feb42ceecd0/Maio_Laranja-removebg-preview.png" alt="Maio Laranja" />';
                 banner.style.display = 'inline-block';
                 banner.style.fontSize = '';
                 banner.style.fontWeight = '';
@@ -6283,7 +6336,7 @@
                 const text = map[theme] || '';
                 banner.textContent = text;
                 banner.style.display = text ? 'inline-block' : 'none';
-                const isCampaign = ['outubro_rosa','novembro_azul','setembro_amarelo','maio_laranja'].includes(theme);
+                const isCampaign = [].includes(theme);
                 banner.style.fontSize = isCampaign ? '24px' : '20px';
                 banner.style.fontWeight = '700';
             }
