@@ -163,19 +163,19 @@
              0 0 6px rgba(0,0,0,0.25),
              0 0 6px var(--ribbon-color, var(--primary-color)); }
 
-        :root.theme-newyear { --primary-color: #D84315; }
-        :root.theme-carnival { --primary-color: #6f42c1; }
-        :root.theme-valentines { --primary-color: #e91e63; }
-        :root.theme-mothers { --primary-color: #ff4081; }
-        :root.theme-fathers { --primary-color: #1976d2; }
-        :root.theme-saojoao { --primary-color: #388e3c; }
-        :root.theme-kids { --primary-color: #ff6f61; }
-        :root.theme-worldcup { --primary-color: #1b5e20; }
-        :root.theme-outubro-rosa { --primary-color: #e91e63; }
-        :root.theme-novembro-azul { --primary-color: #1976d2; }
-        :root.theme-setembro-amarelo { --primary-color: #ffc107; }
-        :root.theme-janeiro-branco { --primary-color: #9e9e9e; }
-        :root.theme-maio-laranja { --primary-color: #ff6f00; }
+        :root.theme-newyear { --primary-color: #D84315; --primary-dark: #BF360C; --primary-light: #FF8A65; --ribbon-color: #D84315; }
+        :root.theme-carnival { --primary-color: #6f42c1; --primary-dark: #4a2ea6; --primary-light: #b39ddb; --ribbon-color: #6f42c1; }
+        :root.theme-valentines { --primary-color: #e91e63; --primary-dark: #c2185b; --primary-light: #f48fb1; --ribbon-color: #e91e63; }
+        :root.theme-mothers { --primary-color: #ff4081; --primary-dark: #f50057; --primary-light: #ff80ab; --ribbon-color: #ff4081; }
+        :root.theme-fathers { --primary-color: #1976d2; --primary-dark: #0d47a1; --primary-light: #64b5f6; --ribbon-color: #1976d2; }
+        :root.theme-saojoao { --primary-color: #388e3c; --primary-dark: #1b5e20; --primary-light: #81c784; --ribbon-color: #388e3c; }
+        :root.theme-kids { --primary-color: #ff6f61; --primary-dark: #e53935; --primary-light: #ffab91; --ribbon-color: #ff6f61; }
+        :root.theme-worldcup { --primary-color: #1b5e20; --primary-dark: #004d40; --primary-light: #66bb6a; --ribbon-color: #1b5e20; }
+        :root.theme-outubro-rosa { --primary-color: #e91e63; --primary-dark: #c2185b; --primary-light: #f48fb1; --ribbon-color: #e91e63; }
+        :root.theme-novembro-azul { --primary-color: #1976d2; --primary-dark: #0d47a1; --primary-light: #64b5f6; --ribbon-color: #1976d2; }
+        :root.theme-setembro-amarelo { --primary-color: #ffc107; --primary-dark: #ff8f00; --primary-light: #ffe082; --ribbon-color: #ffc107; }
+        :root.theme-janeiro-branco { --primary-color: #9e9e9e; --primary-dark: #616161; --primary-light: #eeeeee; --ribbon-color: #9e9e9e; }
+        :root.theme-maio-laranja { --primary-color: #ff6f00; --primary-dark: #e65100; --primary-light: #ffb74d; --ribbon-color: #ff6f00; }
         
         * {
             margin: 0;
@@ -202,7 +202,15 @@
         }
         
         header {
-            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            background: linear-gradient(
+                to right,
+                var(--primary-dark) 0%,
+                var(--primary-dark) 18%,
+                var(--primary-color) 45%,
+                #e9e9e9 75%,
+                #f5f5f5 90%,
+                #ffffff 100%
+            );
             color: var(--white);
             padding: 20px 0;
             border-radius: 10px 10px 0 0;
@@ -235,6 +243,17 @@
             font-size: 16px;
             opacity: 0.9;
         }
+        .theme-banner { display: inline-block; position: relative; width: 300px; height: 60px; overflow: hidden; padding-right: 28px; }
+        .theme-banner img { position: absolute; top: 50%; right: 28px; transform: translateY(-50%); height: 60px; width: auto; }
+        .theme-banner .janeiro-banner { height: 60px; transform: translateY(-50%) scale(1.0); }
+        :root.theme-janeiro-branco .right-info *, :root.theme-janeiro-branco .right-info { color: #1f1f1f !important; }
+        :root.theme-janeiro-branco #user-info-container { background: rgba(255,255,255,0.85) !important; border: 1px solid rgba(0,0,0,0.12) !important; }
+        :root.theme-janeiro-branco .user-welcome, :root.theme-janeiro-branco .user-name { color: #1f1f1f !important; }
+        :root.theme-janeiro-branco .datetime-container .current-time, 
+        :root.theme-janeiro-branco .datetime-container .current-date, 
+        :root.theme-janeiro-branco .datetime-container .current-day { color: #1f1f1f !important; }
+        :root.theme-janeiro-branco .right-top-row > span { color: #888 !important; }
+        @media (max-width: 768px) { .theme-banner { width: 200px; height: 48px; padding-right: 12px; overflow: hidden; } .theme-banner img, .theme-banner .janeiro-banner { height: 48px; transform: translateY(-50%) scale(1.0); right: 12px; } }
         
         .datetime-container {
             display: flex;
@@ -1499,7 +1518,7 @@
         @media (max-width: 1366px) {
             .tab { min-width: 96px; padding: 10px 12px; }
         }
-        
+
         @media (max-width: 768px) {
             .status-management-modern {
                 padding: 20px;
@@ -1528,6 +1547,13 @@
                 width: 100%;
             }
         }
+
+        @media (max-width: 480px) {
+            .tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .tab { min-width: 88px; padding: 10px 10px; }
+            .header-title { font-size: 20px; }
+            .container { padding: 18px; }
+        }
         
         .footer {
             background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
@@ -1545,6 +1571,24 @@
             max-width: 1200px;
             margin: 0 auto;
         }
+        .footer { position: relative; }
+        .footer-left-icon { position: absolute; left: 12px; bottom: 22px; display: flex; align-items: center; }
+        .footer-left-icon .orbit-loader { --uib-size: 60px; --uib-color: var(--white); --uib-speed: 2.5s; display: flex; flex-direction: column; align-items: center; justify-content: center; height: var(--uib-size); width: var(--uib-size); }
+        .footer-left-icon .orbit-slice { position: relative; height: calc(var(--uib-size) / 6); width: 100%; }
+        .footer-left-icon .orbit-slice::before,
+        .footer-left-icon .orbit-slice::after { --uib-a: calc(var(--uib-speed) / -2); --uib-b: calc(var(--uib-speed) / -6); content: ''; position: absolute; top: 0; left: calc(50% - var(--uib-size) / 12); height: 100%; width: calc(100% / 6); border-radius: 50%; background-color: var(--uib-color); flex-shrink: 0; animation: orbitFoot var(--uib-speed) linear infinite; transition: background-color 0.3s ease; }
+        .footer-left-icon .orbit-slice:nth-child(1)::after { animation-delay: var(--uib-a); }
+        .footer-left-icon .orbit-slice:nth-child(2)::before { animation-delay: var(--uib-b); }
+        .footer-left-icon .orbit-slice:nth-child(2)::after { animation-delay: calc(var(--uib-a) + var(--uib-b)); }
+        .footer-left-icon .orbit-slice:nth-child(3)::before { animation-delay: calc(var(--uib-b) * 2); }
+        .footer-left-icon .orbit-slice:nth-child(3)::after { animation-delay: calc(var(--uib-a) + var(--uib-b) * 2); }
+        .footer-left-icon .orbit-slice:nth-child(4)::before { animation-delay: calc(var(--uib-b) * 3); }
+        .footer-left-icon .orbit-slice:nth-child(4)::after { animation-delay: calc(var(--uib-a) + var(--uib-b) * 3); }
+        .footer-left-icon .orbit-slice:nth-child(5)::before { animation-delay: calc(var(--uib-b) * 4); }
+        .footer-left-icon .orbit-slice:nth-child(5)::after { animation-delay: calc(var(--uib-a) + var(--uib-b) * 4); }
+        .footer-left-icon .orbit-slice:nth-child(6)::before { animation-delay: calc(var(--uib-b) * 5); }
+        .footer-left-icon .orbit-slice:nth-child(6)::after { animation-delay: calc(var(--uib-a) + var(--uib-b) * 5); }
+        @keyframes orbitFoot { 0% { transform: translateX(calc(var(--uib-size) * 0.25)) scale(0.73684); opacity: 0.65; } 5% { transform: translateX(calc(var(--uib-size) * 0.235)) scale(0.684208); opacity: 0.58; } 10% { transform: translateX(calc(var(--uib-size) * 0.182)) scale(0.631576); opacity: 0.51; } 15% { transform: translateX(calc(var(--uib-size) * 0.129)) scale(0.578944); opacity: 0.44; } 20% { transform: translateX(calc(var(--uib-size) * 0.076)) scale(0.526312); opacity: 0.37; } 25% { transform: translateX(0%) scale(0.47368); opacity: 0.3; } 30% { transform: translateX(calc(var(--uib-size) * -0.076)) scale(0.526312); opacity: 0.37; } 35% { transform: translateX(calc(var(--uib-size) * -0.129)) scale(0.578944); opacity: 0.44; } 40% { transform: translateX(calc(var(--uib-size) * -0.182)) scale(0.631576); opacity: 0.51; } 45% { transform: translateX(calc(var(--uib-size) * -0.235)) scale(0.684208); opacity: 0.58; } 50% { transform: translateX(calc(var(--uib-size) * -0.25)) scale(0.73684); opacity: 0.65; } 55% { transform: translateX(calc(var(--uib-size) * -0.235)) scale(0.789472); opacity: 0.72; } 60% { transform: translateX(calc(var(--uib-size) * -0.182)) scale(0.842104); opacity: 0.79; } 65% { transform: translateX(calc(var(--uib-size) * -0.129)) scale(0.894736); opacity: 0.86; } 70% { transform: translateX(calc(var(--uib-size) * -0.076)) scale(0.947368); opacity: 0.93; } 75% { transform: translateX(0%) scale(1); opacity: 1; } 80% { transform: translateX(calc(var(--uib-size) * 0.076)) scale(0.947368); opacity: 0.93; } 85% { transform: translateX(calc(var(--uib-size) * 0.129)) scale(0.894736); opacity: 0.86; } 90% { transform: translateX(calc(var(--uib-size) * 0.182)) scale(0.842104); opacity: 0.79; } 95% { transform: translateX(calc(var(--uib-size) * 0.235)) scale(0.789472); opacity: 0.72; } 100% { transform: translateX(calc(var(--uib-size) * 0.25)) scale(0.73684); opacity: 0.65; } }
         
         .footer-main {
             font-size: 14px;
@@ -3569,6 +3613,16 @@
     </div>
     
     <footer class="footer">
+        <div class="footer-left-icon">
+            <div class="orbit-loader">
+                <div class="orbit-slice"></div>
+                <div class="orbit-slice"></div>
+                <div class="orbit-slice"></div>
+                <div class="orbit-slice"></div>
+                <div class="orbit-slice"></div>
+                <div class="orbit-slice"></div>
+            </div>
+        </div>
         <div class="footer-content">
             <div class="footer-main">© 2025 NORMAQ JCB - Todos os direitos reservados • v1.3</div>
             <div class="footer-sub">Desenvolvido por Thiago Carmo – Especialista em Dados e Desenvolvedor</strong><br/></div>
@@ -4191,7 +4245,7 @@
                 for (const alerta of alertas) {
                     if (!alerta.ativo) continue;
                     if (isExcludedAlertUser(alerta.usuario) || isExcludedAlertUser(alerta.email)) continue;
-                    const key = `${alerta.usuario}|${alerta.email}`;
+                    const key = String(alerta.email||'').trim().toLowerCase();
                     if (processed.has(key)) continue;
                     
                     // ALERTA 1: OS próximas de serem escalonadas (para todos os usuários)
@@ -6217,15 +6271,22 @@
                 outubro_rosa: '🎗 Outubro Rosa',
                 novembro_azul: '🎗 Novembro Azul',
                 setembro_amarelo: '🎗 Setembro Amarelo',
-                janeiro_branco: '🎗 Janeiro Branco',
+                janeiro_branco: '',
                 maio_laranja: '🎗 Maio Laranja'
             };
-            const text = map[theme] || '';
-            banner.textContent = text;
-            banner.style.display = text ? 'inline-block' : 'none';
-            const isCampaign = ['outubro_rosa','novembro_azul','setembro_amarelo','janeiro_branco','maio_laranja'].includes(theme);
-            banner.style.fontSize = isCampaign ? '24px' : '20px';
-            banner.style.fontWeight = '700';
+            if (theme === 'janeiro_branco') {
+                banner.innerHTML = '<img class="janeiro-banner" src="https://raw.githubusercontent.com/tcarmo2023/fotos/8268724105a0bb1435fb9f98c1037577ac1f1582/NOVO-removebg-preview.png" alt="Janeiro Branco" />';
+                banner.style.display = 'inline-block';
+                banner.style.fontSize = '';
+                banner.style.fontWeight = '';
+            } else {
+                const text = map[theme] || '';
+                banner.textContent = text;
+                banner.style.display = text ? 'inline-block' : 'none';
+                const isCampaign = ['outubro_rosa','novembro_azul','setembro_amarelo','maio_laranja'].includes(theme);
+                banner.style.fontSize = isCampaign ? '24px' : '20px';
+                banner.style.fontWeight = '700';
+            }
         }
         function setHeaderExtras(theme){
             const ex = document.getElementById('theme-title-extra');
@@ -12938,7 +12999,6 @@ function getEscalonamento(tab, dias, revenda) {
                     .select('id,tipo,usuario,destinatario,titulo,mensagem,data,enviado')
                     .gte('data', sinceIso)
                     .eq('tipo', tipo)
-                    .eq('usuario', usuario)
                     .eq('destinatario', destinatario)
                     .order('data', { ascending: false })
                     .limit(10);
@@ -12956,7 +13016,7 @@ function getEscalonamento(tab, dias, revenda) {
                 const foundLocal = (local||[]).some(r => {
                     const d = new Date(r.data);
                     const okTime = d instanceof Date && !isNaN(d) ? (d.getTime() >= cutoff) : true;
-                    return okTime && r.tipo === tipo && r.usuario === usuario && r.destinatario === destinatario && norm(r.titulo) === norm(titulo) && norm(r.mensagem) === norm(mensagem) && r.enviado;
+                    return okTime && r.tipo === tipo && r.destinatario === destinatario && norm(r.titulo) === norm(titulo) && norm(r.mensagem) === norm(mensagem) && r.enviado;
                 });
                 if (foundLocal) return true;
             } catch(_) {}
@@ -12979,7 +13039,6 @@ function getEscalonamento(tab, dias, revenda) {
                     .from(TABELA_NOTIFICACOES)
                     .select('id,tipo,usuario,destinatario,mensagem,data,enviado')
                     .in('tipo', [tipo, `${tipo}_pre`])
-                    .eq('usuario', usuario)
                     .eq('destinatario', destinatario)
                     .order('data', { ascending: false })
                     .limit(300);
@@ -13004,7 +13063,7 @@ function getEscalonamento(tab, dias, revenda) {
                         const d = new Date(r.data);
                         const okTime = windowMinutes == null ? true : (d instanceof Date && !isNaN(d) ? (d.getTime() >= Date.now() - windowMinutes * 60 * 1000) : true);
                         const cur = extractOSNumbersFromText(r.mensagem).join(',');
-                        return okTime && (r.tipo === tipo || r.tipo === `${tipo}_pre`) && r.usuario === usuario && r.destinatario === destinatario && cur === target;
+                        return okTime && (r.tipo === tipo || r.tipo === `${tipo}_pre`) && r.destinatario === destinatario && cur === target;
                     });
                 if (foundLocal) return true;
             } catch(_) {}
@@ -13019,7 +13078,6 @@ function getEscalonamento(tab, dias, revenda) {
                     .from(TABELA_NOTIFICACOES)
                     .select('mensagem,data')
                     .eq('tipo', tipo)
-                    .eq('usuario', usuario)
                     .eq('destinatario', destinatario)
                     .order('data', { ascending: false })
                     .limit(limit);
@@ -13036,7 +13094,7 @@ function getEscalonamento(tab, dias, revenda) {
                 }
                 try {
                     const local = JSON.parse(localStorage.getItem('historicoNotificacoes') || '[]');
-                    (local||[]).filter(r => r.tipo === tipo && r.usuario === usuario && r.destinatario === destinatario).forEach(r => {
+                    (local||[]).filter(r => r.tipo === tipo && r.destinatario === destinatario).forEach(r => {
                         extractOSNumbersFromText(r.mensagem).forEach(n => set.add(n));
                     });
                 } catch(_) {}
@@ -13085,7 +13143,6 @@ function getEscalonamento(tab, dias, revenda) {
                 const { data, error } = await supabase
                     .from(TABELA_NOTIFICACOES)
                     .select('data,enviado')
-                    .eq('usuario', usuario)
                     .eq('destinatario', destinatario)
                     .order('data', { ascending: false })
                     .limit(1);
@@ -13743,7 +13800,7 @@ async function verificarAlertasUnificados() {
                 for (const alerta of alertas) {
                     if (!alerta.ativo) continue;
                     if (isExcludedAlertUser(alerta.usuario) || isExcludedAlertUser(alerta.email)) continue;
-                    const key = `${alerta.usuario}|${alerta.email}`;
+                    const key = String(alerta.email||'').trim().toLowerCase();
                     if (processed.has(key)) continue;
 
                     // Próximas de escalonamento
