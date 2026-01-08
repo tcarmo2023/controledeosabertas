@@ -2615,7 +2615,7 @@
                     <div class="filter-group"><label class="filter-label">Situação OS</label><select class="filter-select" id="filter-situacao-externa"><option value="">Todos</option><option value="Aberta" selected>Aberta</option><option value="Fechada">Fechada</option></select></div>
                     <div class="filter-group"><label class="filter-label">Dias</label><select class="filter-select" id="filter-dias-externa"><option value="">Todos</option><option value="0-10">0-10 dias</option><option value="11-15">11-15 dias</option><option value="16-20">16-20 dias</option><option value="21-30">21-30 dias</option><option value="30+">30+ dias</option></select></div>
                     <div class="filter-group"><label class="filter-label">Status</label><select class="filter-select" id="filter-status-externa"><option value="">Todos</option><option value="Sem Status">Sem Status</option><option value="Pendente de Peça">Pendente de Peça</option><option value="Pendente de Programação">Pendente de Programação</option><option value="Pendente Submissão">Pendente Submissão</option><option value="Programado">Programado</option><option value="Submissão Aprovada">Submissão Aprovada</option><option value="Submissão em Processamento">Submissão em Processamento</option><option value="Em Negociação">Em Negociação</option><option value="Serviço Concluído">Serviço Concluído</option><option value="Concluindo">Concluindo</option><option value="Em Atendimento">Em Atendimento</option><option value="Cancelado">Cancelado</option></select></div>
-                    <div class="filter-group"><label class="filter-label">Escalonamento</label><select class="filter-select" id="filter-escalonamento-externa"><option value="">Todos</option><option value="Isabelle">Isabelle</option><option value="Ana Leya">Ana Leya</option><option value="Bruna">Bruna</option><option value="Wanderley">Wanderley</option><option value="Graziela">Graziela</option><option value="Johnny">Johnny</option><option value="Antônio Gustavo">Antônio Gustavo</option></select></div>
+                    <div class="filter-group"><label class="filter-label">Escalonamento</label><select class="filter-select" id="filter-escalonamento-externa"><option value="">Todos</option><option value="Isabelle">Isabelle</option><option value="Nayana">Nayana</option><option value="Ana Leya">Ana Leya</option><option value="Bruna">Bruna</option><option value="Wanderley">Wanderley</option><option value="Graziela">Graziela</option><option value="Johnny">Johnny</option><option value="Antônio Gustavo">Antônio Gustavo</option></select></div>
                 </div>
                 
                 <!-- Totais para OS Externa - CORRIGIDO -->
@@ -3187,7 +3187,7 @@
                         <label class="filter-label">Escalonamento</label>
                         <select class="filter-select" id="dashboard-filter-escalonamento">
                             <option value="">Todos</option>
-                            <option value="Isabelle, Ana Leya, Bruna">Isabelle, Ana Leya, Bruna</option>
+                            <option value="Isabelle, Nayana, Bruna">Isabelle, Nayana, Bruna</option>
                             <option value="Wanderley">Wanderley</option>
                             <option value="Graziela">Graziela</option>
                             <option value="Johnny">Johnny</option>
@@ -3312,6 +3312,7 @@
                         <select class="form-select" id="alerta-usuario">
                             <option value="">Selecione um usuário</option>
                             <option value="Isabelle">Isabelle</option>
+                            <option value="Nayana">Nayana</option>
                             <option value="Ana Leya">Ana Leya</option>
                             <option value="Bruna">Bruna</option>
                             <option value="Wanderley">Wanderley</option>
@@ -4759,8 +4760,7 @@
                 return 'Antônio Gustavo';
             } else {
                 if (dias <= 10) {
-                    // Externa/Inerna primeira linha por revenda
-                    if (revendaNum === '3') return 'Ana Leya';
+                    if (revendaNum === '3') return tipo === 'interna' ? 'Bruna' : 'Nayana';
                     if (['1', '2', '4'].includes(revendaNum)) return tipo === 'interna' ? 'Bruna' : 'Isabelle';
                     return 'Isabelle';
                 }
@@ -5026,6 +5026,7 @@
             if (userNome.includes('ana leya') || userNome.includes('ana leia')) return 'Ana Leya';
             if (userNome.includes('isabelle')) return 'Isabelle';
             if (userNome.includes('bruna')) return 'Bruna';
+            if (userNome.includes('nayana')) return 'Nayana';
             return '';
         }
 
@@ -5054,7 +5055,7 @@
                 if (responsavel === 'Antônio Gustavo') return 91;
                 return 0;
             } else {
-                if (responsavel === 'Isabelle' || responsavel === 'Ana Leya' || responsavel === 'Bruna') return 10;
+                if (responsavel === 'Isabelle' || responsavel === 'Ana Leya' || responsavel === 'Bruna' || responsavel === 'Nayana') return 10;
                 if (responsavel === 'Wanderley') return 15; // só ocorre na revenda 3 em interna/externa conforme getEscalonamento
                 if (responsavel === 'Graziela') return 20;
                 if (responsavel === 'Johnny') return 30;
@@ -5310,6 +5311,12 @@
             } catch(_) {}
             checkPrimeiroLoginThenShowModal();
             loadOSData();
+            try { migrarExternasFortalezaParaNayana(); } catch(_) {}
+            try { forcarNayanaExternasFortaleza(); } catch(_) {}
+            try { if (currentTab==='externa') { await renderTable('externa'); updateTotals('externa'); } } catch(_) {}
+            try { migrarInternasFortalezaParaBruna(); } catch(_) {}
+            try { forcarBrunaInternasFortaleza(); } catch(_) {}
+            try { if (currentTab==='interna') { await renderTable('interna'); updateTotals('interna'); } } catch(_) {}
             try { await showUserEventNotificationsIfAny(); } catch(_) {}
             // Atualiza selects de status globais (inclui batch-status) com dados do Supabase
             try { await updateStatusSelects(); } catch(e) { console.warn('Falha ao atualizar selects de status:', e); }
@@ -10776,11 +10783,11 @@ function subscribeWorldCupRealtime(){
                     return ['Giovana', 'Graziela', 'Johnny', 'Antônio Gustavo'];
                 }
                 if (t === 'interna') {
-                    if (is3) return ['Ana Leya', 'Wanderley', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+                    if (is3) return ['Bruna', 'Wanderley', 'Graziela', 'Johnny', 'Antônio Gustavo'];
                     if (is1 || is2 || is4) return ['Bruna', 'Graziela', 'Johnny', 'Antônio Gustavo'];
                     return ['Bruna', 'Graziela', 'Johnny', 'Antônio Gustavo'];
                 }
-                if (is3) return ['Ana Leya', 'Wanderley', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+                if (is3) return ['Nayana', 'Wanderley', 'Graziela', 'Johnny', 'Antônio Gustavo'];
                 if (is1 || is2 || is4) return ['Isabelle', 'Graziela', 'Johnny', 'Antônio Gustavo'];
                 return ['Isabelle', 'Graziela', 'Johnny', 'Antônio Gustavo'];
             }
@@ -10805,8 +10812,8 @@ function subscribeWorldCupRealtime(){
                 if (isBruna && String(tabKey).toLowerCase()==='interna') {
                     return Array.from(new Set(arr.concat(['3'])));
                 }
-                const isIsabelle = v.includes('isabelle');
-                if (isIsabelle && String(tabKey).toLowerCase()==='externa') {
+                const isNayana = v.includes('nayana');
+                if (isNayana && String(tabKey).toLowerCase()==='externa') {
                     return Array.from(new Set(arr.concat(['3'])));
                 }
                 return arr;
@@ -10914,9 +10921,7 @@ function subscribeWorldCupRealtime(){
                     const fNorm = normalizeNomeResponsavel(escalonamento);
                     const matchCurrent = fNorm === normalizeNomeResponsavel(escCalc);
                     const matchPrev = prevList.some(p => fNorm === normalizeNomeResponsavel(p));
-                    const consNorm = normalizeNomeResponsavel(os.Consultor || '');
-                    const consMatch = consNorm.includes(fNorm);
-                    if (!matchCurrent && !matchPrev && !consMatch) return false;
+                    if (!matchCurrent && !matchPrev) return false;
                 }
                 // Modificado: Permite que usuários vejam OS que estão com eles, que já saíram deles, ou que pertencem às revendas permitidas
                 if (restrictByUser) {
@@ -10932,13 +10937,12 @@ function subscribeWorldCupRealtime(){
                     // Verifica se a OS já pertenceu ao usuário (saiu dele)
                     let hasBelongedToUser = false;
                     
-                    // Para Ana Leya: verifica se a OS já foi dela (0-10 dias para interna e externa)
+                    // Para Ana Leya: só conta se for primeira da cadeia nesta revenda/aba
                     if (userEscNorm.includes('ana leya') || userEscNorm.includes('ana leia')) {
-                        if (tab === 'interna' || tab === 'externa') {
+                        const chain = getEscalonamentoChain(tab, os.Revenda);
+                        if (normalizeNomeResponsavel(chain[0]) === normalizeNomeResponsavel('Ana Leya')) {
                             const diasParaAna = getEscalonamentoLimit(tab, 'Ana Leya', os.Revenda);
-                            if (diasEmAberto > diasParaAna) {
-                                hasBelongedToUser = true;
-                            }
+                            if (diasEmAberto > diasParaAna) hasBelongedToUser = true;
                         }
                     }
                     
@@ -10947,6 +10951,16 @@ function subscribeWorldCupRealtime(){
                         if (tab === 'externa') {
                             const diasParaIsabelle = getEscalonamentoLimit('externa', 'Isabelle', os.Revenda);
                             if (diasEmAberto > diasParaIsabelle) {
+                                hasBelongedToUser = true;
+                            }
+                        }
+                    }
+
+                    // Para Nayana: verifica se a OS já foi dela (0-10 dias para externa)
+                    if (userEscNorm.includes('nayana')) {
+                        if (tab === 'externa') {
+                            const diasParaNayana = getEscalonamentoLimit('externa', 'Nayana', os.Revenda);
+                            if (diasEmAberto > diasParaNayana) {
                                 hasBelongedToUser = true;
                             }
                         }
@@ -11042,12 +11056,12 @@ function subscribeWorldCupRealtime(){
                 return ['Giovana', 'Graziela', 'Johnny', 'Antônio Gustavo'];
             }
             if (t === 'interna') {
-                if (is3) return ['Ana Leya', 'Wanderley', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+                if (is3) return ['Bruna', 'Wanderley', 'Graziela', 'Johnny', 'Antônio Gustavo'];
                 if (is1 || is2 || is4) return ['Bruna', 'Graziela', 'Johnny', 'Antônio Gustavo'];
                 return ['Bruna', 'Graziela', 'Johnny', 'Antônio Gustavo'];
             }
             // externa
-            if (is3) return ['Ana Leya', 'Wanderley', 'Graziela', 'Johnny', 'Antônio Gustavo'];
+            if (is3) return ['Nayana', 'Wanderley', 'Graziela', 'Johnny', 'Antônio Gustavo'];
             if (is1 || is2 || is4) return ['Isabelle', 'Graziela', 'Johnny', 'Antônio Gustavo'];
             return ['Isabelle', 'Graziela', 'Johnny', 'Antônio Gustavo'];
         }
@@ -11119,6 +11133,52 @@ function subscribeWorldCupRealtime(){
             } catch(_) {}
         }
 
+        function migrarExternasFortalezaParaNayana() {
+            try {
+                const map = JSON.parse(localStorage.getItem('escalonamentoCustomMap') || '{}');
+                const faixas = ['0-10','11-15','16-20','21-30','30+'];
+                faixas.forEach(f => {
+                    const key = `externa|3|${f}`;
+                    const v = map[key];
+                    if (v && normalizeNomeResponsavel(v) === normalizeNomeResponsavel('Ana Leya')) map[key] = 'Nayana';
+                });
+                localStorage.setItem('escalonamentoCustomMap', JSON.stringify(map));
+            } catch(_) {}
+        }
+
+        function forcarNayanaExternasFortaleza() {
+            try {
+                const map = JSON.parse(localStorage.getItem('escalonamentoCustomMap') || '{}');
+                const base = 'externa|3|';
+                ['11-15','16-20','21-30','30+'].forEach(f => { const k = base+f; if (map[k]) delete map[k]; });
+                map[base+'0-10'] = 'Nayana';
+                localStorage.setItem('escalonamentoCustomMap', JSON.stringify(map));
+            } catch(_) {}
+        }
+
+        function migrarInternasFortalezaParaBruna() {
+            try {
+                const map = JSON.parse(localStorage.getItem('escalonamentoCustomMap') || '{}');
+                const faixas = ['0-10','11-15','16-20','21-30','30+'];
+                faixas.forEach(f => {
+                    const key = `interna|3|${f}`;
+                    const v = map[key];
+                    if (v && normalizeNomeResponsavel(v) === normalizeNomeResponsavel('Ana Leya')) map[key] = 'Bruna';
+                });
+                localStorage.setItem('escalonamentoCustomMap', JSON.stringify(map));
+            } catch(_) {}
+        }
+
+        function forcarBrunaInternasFortaleza() {
+            try {
+                const map = JSON.parse(localStorage.getItem('escalonamentoCustomMap') || '{}');
+                const base = 'interna|3|';
+                ['11-15','16-20','21-30','30+'].forEach(f => { const k = base+f; if (map[k]) delete map[k]; });
+                map[base+'0-10'] = 'Bruna';
+                localStorage.setItem('escalonamentoCustomMap', JSON.stringify(map));
+            } catch(_) {}
+        }
+
         function getEscalonamentoDefault(tab, dias, revenda) {
             if (!Number.isFinite(dias) || dias < 0) dias = 0;
             const revendaNum = revenda ? revenda.toString() : '';
@@ -11140,11 +11200,11 @@ function subscribeWorldCupRealtime(){
             if (dias <= 10) {
                 if (tab === 'externa') {
                     if (['1', '2', '4'].includes(revendaNum)) return 'Isabelle';
-                    if (revendaNum === '3') return 'Ana Leya';
+                    if (revendaNum === '3') return 'Nayana';
                     return 'Isabelle';
                 }
                 if (tab === 'interna') {
-                    if (revendaNum === '3') return 'Ana Leya';
+                    if (revendaNum === '3') return 'Bruna';
                     if (['1', '2', '4'].includes(revendaNum)) return 'Bruna';
                     return 'Bruna';
                 }
@@ -11235,7 +11295,7 @@ function getEscalonamento(tab, dias, revenda) {
                 const interna = Array.isArray(osData.interna) ? osData.interna : [];
                 const garantia = Array.isArray(osData.garantia) ? osData.garantia : [];
                 const all = [...externa, ...interna, ...garantia];
-                const users = ['Isabelle','Ana Leya','Bruna','Wanderley','Graziela','Johnny','Antônio Gustavo','Giovana','Flávia','Thiago Carmo'];
+                const users = ['Isabelle','Nayana','Ana Leya','Bruna','Wanderley','Graziela','Johnny','Antônio Gustavo','Giovana','Flávia','Thiago Carmo'];
                 const tiposSelBase = ['externa','interna','garantia'];
                 const revsSelBase = ['1','2','3','4'];
                 const rows = all.map(os => {
@@ -11916,7 +11976,7 @@ function getEscalonamento(tab, dias, revenda) {
                             </thead>
                             <tbody>
                                 <tr><td>Recife/Natal/Petrolina (1/2/4)</td><td>Isabelle</td><td>Graziela</td><td>Graziela</td><td>Johnny</td><td>Antônio Gustavo</td></tr>
-                                <tr><td>Fortaleza (3)</td><td>Ana Leya</td><td>Wanderley</td><td>Graziela</td><td>Johnny</td><td>Antônio Gustavo</td></tr>
+                                <tr><td>Fortaleza (3)</td><td>Nayana</td><td>Wanderley</td><td>Graziela</td><td>Johnny</td><td>Antônio Gustavo</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -11930,7 +11990,7 @@ function getEscalonamento(tab, dias, revenda) {
                             </thead>
                             <tbody>
                                 <tr><td>Recife/Natal/Petrolina (1/2/4)</td><td>Bruna</td><td>Graziela</td><td>Graziela</td><td>Johnny</td><td>Antônio Gustavo</td></tr>
-                                <tr><td>Fortaleza (3)</td><td>Ana Leya</td><td>Wanderley</td><td>Graziela</td><td>Johnny</td><td>Antônio Gustavo</td></tr>
+                                <tr><td>Fortaleza (3)</td><td>Bruna</td><td>Wanderley</td><td>Graziela</td><td>Johnny</td><td>Antônio Gustavo</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -12969,6 +13029,11 @@ function getEscalonamento(tab, dias, revenda) {
                     if (u.includes(',')) { u.split(',').map(s=>s.trim()).forEach(n=>{ if (n) byUser.set(n, email); }); }
                     if (u.includes(' e ')) { u.split(' e ').map(s=>s.trim()).forEach(n=>{ if (n) byUser.set(n, email); }); }
                 });
+                const hasNayana = alertas.some(a => String(a.usuario||'').trim() === 'Nayana');
+                if (!hasNayana) {
+                    try { await upsertAlertaSupabase({ usuario: 'Nayana', email: 'maria.oliveira@normaq.com.br', dias: 5, ativo: true }); } catch(_){ }
+                    byUser.set('Nayana', 'maria.oliveira@normaq.com.br');
+                }
                 alertasByUserCache = byUser;
                 return byUser;
             } catch(_) { return new Map(); }
@@ -13687,6 +13752,7 @@ function getEscalonamento(tab, dias, revenda) {
                                 <div class="custom-select-wrapper">
                                     <select id="transfer-to-externa" class="custom-select">
                                         <option value="Isabelle">Isabelle</option>
+                                        <option value="Nayana">Nayana</option>
                                         <option value="Ana Leya">Ana Leya</option>
                                         <option value="Bruna">Bruna</option>
                                     </select>
