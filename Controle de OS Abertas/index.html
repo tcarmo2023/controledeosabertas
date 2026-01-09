@@ -4931,6 +4931,23 @@
                     data-acao="${encodeURIComponent(os['Acao / Atualizacao'] || '')}"
                     data-status="${encodeURIComponent(status || '')}"
                 >${status}</span>`;
+
+                const currentUser = window.NormaQCurrentUser || (JSON.parse(localStorage.getItem('authUser')) || null);
+                const allowedOwners = currentUser ? (function(){
+                    try {
+                        const map = JSON.parse(localStorage.getItem('viewPermMap')||'{}');
+                        const v = normalizeNomeResponsavel((currentUser?.nome_completo || currentUser?.usuario || ''));
+                        const owners = Object.keys(map[v]||{});
+                        return owners.filter(o => !!(((map[v]||{})[o]||{})[String(tab).toLowerCase()]));
+                    } catch(_) { return []; }
+                })() : [];
+                const esc = getEscalonamentoForOS(os);
+                const consultorNorm = normalizeNomeResponsavel(os.Consultor||'');
+                const ownerMatch = (Array.isArray(allowedOwners) && allowedOwners.length) ? allowedOwners.some(o => {
+                    const on = normalizeNomeResponsavel(o);
+                    return on === normalizeNomeResponsavel(esc) || (!!consultorNorm && consultorNorm.includes(on));
+                }) : false;
+                const ownerBadge = ownerMatch ? '<span class="chip">perm dono</span>' : '';
                 
                 const fmt = (v) => {
                     const n = parseFloat(v || 0);
@@ -4954,7 +4971,7 @@
                         <td>${fmt(os['Total OS'])}</td>
                         <td><div class="observacao-text" title="${observacaoReal || ''}">${observacaoReal || ''}</div></td>
                         <td><div class="acao-atualizacao-text" title="${os['Acao / Atualizacao'] || ''}">${os['Acao / Atualizacao'] || ''}</div></td>
-                        <td><span class="escalonamento-badge">${getEscalonamentoForOS(os)}</span></td>
+                        <td><span class="escalonamento-badge">${getEscalonamentoForOS(os)}</span> ${ownerBadge}</td>
                         <td><button class="btn btn-primary btn-sm open-individual"
                             data-os-id="${os.Chave || os.Cahve}"
                             data-nro-os="${encodeURIComponent(os['Numero OS'] || '')}"
@@ -10561,18 +10578,10 @@ function subscribeWorldCupRealtime(){
             let processed = 0;
             let errors = 0;
             
-            const userInfo = getCurrentUserInfo();
             for (const osId of selectedOS) {
                 try {
                     const os = batchOSData.find(o => (o.Chave || o.Cahve) == osId);
                     if (os) {
-                        if ((userInfo?.usuario || '').toLowerCase().includes('bruna')) {
-                            const tipoOk = (os.Tipo || '').toLowerCase() === 'Interna'.toLowerCase();
-                            const revOk = ['1','2','4'].includes(String(os.Revenda || ''));
-                            if (!tipoOk || !revOk) {
-                                continue;
-                            }
-                        }
                         const statusAnterior = extrairStatusDaObservacao(os.Observacao);
                         // Extrai a observação atual sem o status
                         const observacaoAtual = extrairObservacaoSemStatus(os.Observacao);
@@ -10856,6 +10865,14 @@ function subscribeWorldCupRealtime(){
                     return !!perms[String(tabKey).toLowerCase()];
                 } catch(_){ return false; }
             }
+            function getOwnersPermittedForTab(user, tabKey){
+                try {
+                    const map = JSON.parse(localStorage.getItem('viewPermMap')||'{}');
+                    const v = normalizeNomeResponsavel((user?.nome_completo || user?.usuario || ''));
+                    const owners = Object.keys(map[v]||{});
+                    return owners.filter(o => !!(((map[v]||{})[o]||{})[String(tabKey).toLowerCase()]));
+                } catch(_){ return []; }
+            }
             const ownerOverride = currentUser && escalonamento ? canViewOwnerForTab(currentUser, escalonamento, tab) : false;
             const restrictByUser = !!(currentUser && !(currentUser.is_admin || currentUser.tipo_usuario === 'Administrador') && currentUser.tipo_usuario !== 'Gestor' && !hasPerm && !ownerOverride && !escalonamento);
             const normalize = (str) => (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -10872,6 +10889,7 @@ function subscribeWorldCupRealtime(){
             const userEscNorm = restrictByUser ? normalize(getUserEscLabel(currentUser?.nome_completo || '')) : '';
 
             const allowedRevendas = currentUser ? getAllowedRevendasForUserTab(currentUser, tab) : [];
+            const allowedOwners = hasPerm && currentUser ? getOwnersPermittedForTab(currentUser, tab) : [];
 
             return data.filter(os => {
                 // Filtro de revenda (múltipla seleção) e permissões por revenda
@@ -11014,8 +11032,12 @@ function subscribeWorldCupRealtime(){
                     
                     const osRevenda = String(os.Revenda || '');
                     const inAllowedRevendas = allowedRevendas.includes(osRevenda);
+                    const ownerPermMatch = (Array.isArray(allowedOwners) && allowedOwners.length) ? allowedOwners.some(o => {
+                        const on = normalizeNomeResponsavel(o);
+                        return on === normalizeNomeResponsavel(escCalc) || (!!consultorNorm && consultorNorm.includes(on));
+                    }) : false;
                     // Permite visualização se a OS está atualmente com o usuário, já foi dele, ou está em revenda permitida
-                    if (!isCurrentlyWithUser && !isConsultorUser && !hasBelongedToUser && !inAllowedRevendas) {
+                    if (!isCurrentlyWithUser && !isConsultorUser && !hasBelongedToUser && !inAllowedRevendas && !ownerPermMatch) {
                         return false;
                     }
                 }
