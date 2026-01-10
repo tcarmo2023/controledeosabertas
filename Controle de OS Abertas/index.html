@@ -8136,8 +8136,10 @@ function subscribeWorldCupRealtime(){
 
         // --- Atualizar Valores (CSV) ---
         function detectDelimiter(headerLine) {
-            if (headerLine.includes(';')) return ';';
-            if (headerLine.includes(',')) return ',';
+            const sc = (headerLine.match(/;/g) || []).length;
+            const cc = (headerLine.match(/,/g) || []).length;
+            if (sc && sc >= cc) return ';';
+            if (cc) return ',';
             return ';';
         }
 
@@ -8161,13 +8163,40 @@ function subscribeWorldCupRealtime(){
             return { ok: hasKey && missing.length === 0, issues, missing };
         }
 
+        function parseCSVLine(line, delim) {
+            const out = [];
+            let cur = '';
+            let inQ = false;
+            for (let i = 0; i < line.length; i++) {
+                const ch = line[i];
+                if (ch === '"') {
+                    if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
+                    else { inQ = !inQ; }
+                } else if (ch === delim && !inQ) {
+                    out.push(cur);
+                    cur = '';
+                } else {
+                    cur += ch;
+                }
+            }
+            out.push(cur);
+            return out.map(s => {
+                let t = String(s).trim();
+                if (t.startsWith('"') && t.endsWith('"')) t = t.slice(1, -1);
+                return t;
+            });
+        }
         function parseCSVText(text) {
-            const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+            const lines = String(text || '')
+                .replace(/\r\n/g, '\n')
+                .replace(/\r/g, '\n')
+                .split('\n')
+                .filter(l => l.trim().length > 0);
             if (lines.length === 0) return { headers: [], rows: [] };
             const delim = detectDelimiter(lines[0]);
-            const headers = lines[0].split(delim).map(h => h.trim());
+            const headers = parseCSVLine(lines[0], delim).map(h => h.trim());
             const rows = lines.slice(1).map(line => {
-                const parts = line.split(delim);
+                const parts = parseCSVLine(line, delim);
                 const obj = {};
                 headers.forEach((h, idx) => obj[h] = (parts[idx] ?? '').trim());
                 return obj;
@@ -8191,10 +8220,21 @@ function subscribeWorldCupRealtime(){
 
         async function readFileAsText(file) {
             return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsText(file, 'utf-8');
+                const r1 = new FileReader();
+                r1.onload = () => {
+                    const txt = String(r1.result || '');
+                    const bad = (txt.match(/\uFFFD/g) || []).length;
+                    if (bad > 0) {
+                        const r2 = new FileReader();
+                        r2.onload = () => resolve(r2.result);
+                        r2.onerror = () => resolve(txt);
+                        r2.readAsText(file, 'windows-1252');
+                    } else {
+                        resolve(txt);
+                    }
+                };
+                r1.onerror = reject;
+                r1.readAsText(file, 'utf-8');
             });
         }
 
@@ -8246,6 +8286,13 @@ function subscribeWorldCupRealtime(){
             if (obj.Revenda) {
                 const code = getRevendaCode(obj.Revenda);
                 obj.Revenda = code || obj.Revenda;
+            }
+            if (obj.Tipo && !obj.Chassi) {
+                const chassisPattern = /^[A-Z0-9]{10,17}$/i;
+                if (chassisPattern.test(String(obj.Tipo).trim())) {
+                    obj.Chassi = obj.Tipo;
+                    obj.Tipo = obj['Tipo OS'] ? String(obj['Tipo OS']).trim() : 'Externa';
+                }
             }
             return obj;
         }
@@ -8907,6 +8954,13 @@ function subscribeWorldCupRealtime(){
                     if (p['Acao / Atualizacao'] != null) p['Acao / Atualizacao'] = String(p['Acao / Atualizacao']);
                     // Cliente, Chassi, Modelo, Descricao Modelo, Consultor strings
                     ['Cliente','Chassi','Modelo','Descricao Modelo','Consultor','Situacao OS','Tipo'].forEach(f => { if (p[f] != null) p[f] = String(p[f]).trim(); });
+                    if (p.Tipo && !p.Chassi) {
+                        const chassisPattern = /^[A-Z0-9]{10,17}$/i;
+                        if (chassisPattern.test(p.Tipo)) {
+                            p.Chassi = p.Tipo;
+                            p.Tipo = r['Tipo OS'] ? String(r['Tipo OS']).trim() : 'Externa';
+                        }
+                    }
                     if (!p['Situacao OS']) p['Situacao OS'] = 'Aberta';
                     // remove apenas campos nulos (mantém strings vazias)
                     Object.keys(p).forEach(k => { if (p[k] === null) delete p[k]; });
