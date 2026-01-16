@@ -4818,6 +4818,37 @@
                 return;
             }
             
+            const getVal = (os, col) => {
+                switch (col) {
+                    case 'revenda':
+                        return String((revendasMap[String(os.Revenda)] || os.Revenda || '')).toLowerCase();
+                    case 'nro-os': {
+                        const n = parseFloat(os['Numero OS'] || '');
+                        return isNaN(n) ? 0 : n;
+                    }
+                    case 'situacao':
+                        return String(os['Situacao OS'] || '').toLowerCase();
+                    case 'tipo':
+                        return String(os.Tipo || '').toLowerCase();
+                    case 'status':
+                        return String(extrairStatusDaObservacao(os.Observacao) || '').toLowerCase();
+                    case 'cliente':
+                        return String(os.Cliente || '').toLowerCase();
+                    case 'chassi':
+                        return String(os.Chassi || '').toLowerCase();
+                    case 'consultor':
+                        return String(os.Consultor || '').toLowerCase();
+                    case 'observacao':
+                        return String(extrairObservacaoSemStatus(os.Observacao) || '').toLowerCase();
+                    case 'acao-atualizacao':
+                        return String(os['Acao / Atualizacao'] || '').toLowerCase();
+                    case 'escalonamento':
+                        return String(getEscalonamentoForOS(os) || '').toLowerCase();
+                    default:
+                        return os[col];
+                }
+            };
+
             const sortedData = [...filteredData].sort((a, b) => {
                 let valueA, valueB;
                 
@@ -4844,22 +4875,13 @@
                     valueA = parseFloat(a['Total OS'] || 0);
                     valueB = parseFloat(b['Total OS'] || 0);
                 } else {
-                    // Ordenação genérica para outras colunas
-                    valueA = a[currentSort.column];
-                    valueB = b[currentSort.column];
-                    
-                    // Tenta converter para número
+                    valueA = getVal(a, currentSort.column);
+                    valueB = getVal(b, currentSort.column);
                     const numA = parseFloat(valueA);
                     const numB = parseFloat(valueB);
-                    
-                    // Se ambos são números válidos, compara como números
-                    if (!isNaN(numA) && !isNaN(numB)) {
+                    if (!isNaN(numA) && !isNaN(numB) && currentSort.column !== 'revenda') {
                         valueA = numA;
                         valueB = numB;
-                    } else {
-                        // Se não são números, converte para string para comparação
-                        valueA = String(valueA || '').toLowerCase();
-                        valueB = String(valueB || '').toLowerCase();
                     }
                 }
                 
@@ -5053,11 +5075,9 @@
             const isAdmin = !!(user.is_admin || user.tipo_usuario === 'Administrador');
             const isGestor = String(user.tipo_usuario||'').toLowerCase() === 'gestor';
             if (isAdmin || isGestor) return;
-            const resp = getResponsavelAtualFromUser(user);
-            if (!resp) return;
             ['externa','interna','garantia'].forEach(tab => {
                 const sel = document.getElementById(`filter-escalonamento-${tab}`);
-                if (sel) sel.value = resp;
+                if (sel) sel.value = '';
             });
         }
 
@@ -5308,6 +5328,7 @@
             } catch(_) {}
             initializeTabs();
             setupEventListeners();
+            lockEscalonamentoFilters();
             applyUserAccessControl();
             try { updateUserNameDisplay(); } catch(_) {}
             try { setDefaultEscalonamentoFilterForUser(); } catch(_) {}
@@ -5510,6 +5531,15 @@
                     }
                 });
             });
+        }
+
+        function lockEscalonamentoFilters() {
+            ['externa','interna','garantia'].forEach(t => {
+                const el = document.getElementById(`filter-escalonamento-${t}`);
+                if (el) { el.value = ''; }
+            });
+            const dashEl = document.getElementById('dashboard-filter-escalonamento');
+            if (dashEl) { dashEl.value = ''; }
         }
         
         // Função debounce para otimizar performance
@@ -10861,6 +10891,22 @@ function subscribeWorldCupRealtime(){
             }
         }
 
+        if (typeof window.getUserEscLabel !== 'function') {
+            window.getUserEscLabel = function(nomeCompleto){
+                try {
+                    const normalize = (str) => String(str || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+                    const parts = String(nomeCompleto || '').trim().split(/\s+/);
+                    const first = parts[0] || '';
+                    const second = parts[1] || '';
+                    const two = `${first} ${second}`.trim();
+                    const twoNorm = normalize(two);
+                    if (twoNorm.startsWith('ana leya') || twoNorm.startsWith('ana leia')) return 'Ana Leya';
+                    if (twoNorm.startsWith('antonio gustavo') || twoNorm.startsWith('antônio gustavo')) return 'Antônio Gustavo';
+                    return first || '';
+                } catch(_) { return String(nomeCompleto||'').split(/\s+/)[0] || ''; }
+            }
+        }
+
         if (typeof window.loadRevendaPermMap !== 'function') {
             window.loadRevendaPermMap = function(){
                 try { return JSON.parse(localStorage.getItem('revendaPermMap')||'{}'); } catch(_) { return {}; }
@@ -10869,13 +10915,15 @@ function subscribeWorldCupRealtime(){
         if (typeof window.getAllowedRevendasForUserTab !== 'function') {
             window.getAllowedRevendasForUserTab = function(user, tabKey){
                 const map = loadRevendaPermMap();
-                const v = normalizeNomeResponsavel((user?.nome_completo || user?.usuario || ''));
-                const arr = (((map[v]||{})[String(tabKey).toLowerCase()])||[]).map(r => String(r));
-                const isBruna = v.includes('bruna');
+                const vFull = normalizeNomeResponsavel((user?.nome_completo || user?.usuario || ''));
+                const vShort = normalizeNomeResponsavel(getUserEscLabel(user?.nome_completo || user?.usuario || ''));
+                const viewerKey = (map[vFull] ? vFull : (map[vShort] ? vShort : vFull));
+                const arr = (((map[viewerKey]||{})[String(tabKey).toLowerCase()])||[]).map(r => String(r));
+                const isBruna = vFull.includes('bruna');
                 if (isBruna && String(tabKey).toLowerCase()==='interna') {
                     return Array.from(new Set(arr.concat(['3'])));
                 }
-                const isNayana = v.includes('nayana');
+                const isNayana = vFull.includes('nayana');
                 if (isNayana && String(tabKey).toLowerCase()==='externa') {
                     return Array.from(new Set(arr.concat(['3'])));
                 }
@@ -10904,27 +10952,33 @@ function subscribeWorldCupRealtime(){
             function userHasAnyViewPermForTab(user, tabKey){
                 try {
                     const map = JSON.parse(localStorage.getItem('viewPermMap')||'{}');
-                    const v = normalizeNomeResponsavel((user?.nome_completo || user?.usuario || ''));
-                    const owners = Object.keys(map[v]||{});
-                    return owners.some(u => !!(((map[v]||{})[u]||{})[String(tabKey).toLowerCase()]));
+                    const vFull = normalizeNomeResponsavel((user?.nome_completo || user?.usuario || ''));
+                    const vShort = normalizeNomeResponsavel(getUserEscLabel(user?.nome_completo || user?.usuario || ''));
+                    const viewerKey = (map[vFull] ? vFull : (map[vShort] ? vShort : vFull));
+                    const owners = Object.keys(map[viewerKey]||{});
+                    return owners.some(u => !!(((map[viewerKey]||{})[u]||{})[String(tabKey).toLowerCase()]));
                 } catch(_){ return false; }
             }
             const hasPerm = currentUser ? userHasAnyViewPermForTab(currentUser, tab) : false;
             function canViewOwnerForTab(user, owner, tabKey){
                 try {
                     const map = JSON.parse(localStorage.getItem('viewPermMap')||'{}');
-                    const v = normalizeNomeResponsavel((user?.nome_completo || user?.usuario || ''));
+                    const vFull = normalizeNomeResponsavel((user?.nome_completo || user?.usuario || ''));
+                    const vShort = normalizeNomeResponsavel(getUserEscLabel(user?.nome_completo || user?.usuario || ''));
+                    const viewerKey = (map[vFull] ? vFull : (map[vShort] ? vShort : vFull));
                     const o = normalizeNomeResponsavel(owner||'');
-                    const perms = (((map[v]||{})[o])||{});
+                    const perms = (((map[viewerKey]||{})[o])||{});
                     return !!perms[String(tabKey).toLowerCase()];
                 } catch(_){ return false; }
             }
             function getOwnersPermittedForTab(user, tabKey){
                 try {
                     const map = JSON.parse(localStorage.getItem('viewPermMap')||'{}');
-                    const v = normalizeNomeResponsavel((user?.nome_completo || user?.usuario || ''));
-                    const owners = Object.keys(map[v]||{});
-                    return owners.filter(o => !!(((map[v]||{})[o]||{})[String(tabKey).toLowerCase()]));
+                    const vFull = normalizeNomeResponsavel((user?.nome_completo || user?.usuario || ''));
+                    const vShort = normalizeNomeResponsavel(getUserEscLabel(user?.nome_completo || user?.usuario || ''));
+                    const viewerKey = (map[vFull] ? vFull : (map[vShort] ? vShort : vFull));
+                    const owners = Object.keys(map[viewerKey]||{});
+                    return owners.filter(o => !!(((map[viewerKey]||{})[o]||{})[String(tabKey).toLowerCase()]));
                 } catch(_){ return []; }
             }
             const ownerOverride = currentUser && escalonamento ? canViewOwnerForTab(currentUser, escalonamento, tab) : false;
@@ -10943,7 +10997,9 @@ function subscribeWorldCupRealtime(){
             const userEscNorm = restrictByUser ? normalize(getUserEscLabel(currentUser?.nome_completo || '')) : '';
 
             const allowedRevendas = currentUser ? getAllowedRevendasForUserTab(currentUser, tab) : [];
-            const allowedOwners = hasPerm && currentUser ? getOwnersPermittedForTab(currentUser, tab) : [];
+            const allowedOwnersPerm = currentUser ? getOwnersPermittedForTab(currentUser, tab) : [];
+            const userOwnLabel = getUserEscLabel(currentUser?.nome_completo || currentUser?.usuario || '');
+            const allowedOwnersAll = [userOwnLabel].concat(Array.isArray(allowedOwnersPerm) ? allowedOwnersPerm : []);
 
             return data.filter(os => {
                 // Filtro de revenda (múltipla seleção) e permissões por revenda
@@ -10955,9 +11011,8 @@ function subscribeWorldCupRealtime(){
                     if (!hasMatchingRevenda) {
                         return false;
                     }
-                } else if (restrictByUser && allowedRevendas && allowedRevendas.length > 0) {
-                    const osRevenda = String(os.Revenda || '');
-                    if (!allowedRevendas.includes(osRevenda)) return false;
+                } else {
+                    // Sem seleção de revenda: trata como "Todas" (não restringe por revenda)
                 }
                 
                 if (nroOs && (os['Numero OS'] || '').toString().toLowerCase() !== nroOs.toLowerCase()) return false;
@@ -10984,16 +11039,43 @@ function subscribeWorldCupRealtime(){
                 }
                 const escCalc = getEscalonamentoForOS(os);
                 if (escalonamento) {
+                    const isAdminOrGestor = !!(currentUser && (currentUser.is_admin || currentUser.tipo_usuario === 'Administrador' || currentUser.tipo_usuario === 'Gestor'));
                     const tipoCalc = os.Tipo?.toLowerCase() || tab;
                     const revCode = getRevendaCode(String(os.Revenda)) || String(os.Revenda);
                     const chain = getEscalonamentoChain(tipoCalc, revCode);
                     const normChain = chain.map(normalizeNomeResponsavel);
                     const idx = normChain.indexOf(normalizeNomeResponsavel(escCalc));
                     const prevList = idx > 0 ? chain.slice(0, idx) : [];
+                    const consultorNorm = normalizeNomeResponsavel(os.Consultor || '');
+                    const userOwnNorm = normalizeNomeResponsavel(userOwnLabel);
+                    const belongsToUserSet = (
+                        normalizeNomeResponsavel(escCalc).includes(userOwnNorm) ||
+                        prevList.some(p => normalizeNomeResponsavel(p) === userOwnNorm) ||
+                        (!!consultorNorm && consultorNorm.includes(userOwnNorm))
+                    );
+                    if (!isAdminOrGestor && !belongsToUserSet) return false;
                     const fNorm = normalizeNomeResponsavel(escalonamento);
                     const matchCurrent = fNorm === normalizeNomeResponsavel(escCalc);
-                    const matchPrev = prevList.some(p => fNorm === normalizeNomeResponsavel(p));
-                    if (!matchCurrent && !matchPrev) return false;
+                    if (!matchCurrent) return false;
+                } else {
+                    const isAdminOrGestor = !!(currentUser && (currentUser.is_admin || currentUser.tipo_usuario === 'Administrador' || currentUser.tipo_usuario === 'Gestor'));
+                    if (!isAdminOrGestor) {
+                        const tipoCalc = os.Tipo?.toLowerCase() || tab;
+                        const revCode = getRevendaCode(String(os.Revenda)) || String(os.Revenda);
+                        const chain = getEscalonamentoChain(tipoCalc, revCode);
+                        const normChain = chain.map(normalizeNomeResponsavel);
+                        const idx = normChain.indexOf(normalizeNomeResponsavel(escCalc));
+                        const prevList = idx > 0 ? chain.slice(0, idx) : [];
+                        const consultorNorm = normalizeNomeResponsavel(os.Consultor || '');
+                        const matchAnyAllowed = (Array.isArray(allowedOwnersAll) && allowedOwnersAll.length) ? allowedOwnersAll.some(o => {
+                            const on = normalizeNomeResponsavel(o);
+                            const matchCurrent = normalizeNomeResponsavel(escCalc).includes(on);
+                            const matchPrev = prevList.some(p => on === normalizeNomeResponsavel(p));
+                            const matchConsultor = !!consultorNorm && consultorNorm.includes(on);
+                            return matchCurrent || matchPrev || matchConsultor;
+                        }) : false;
+                        if (!matchAnyAllowed) return false;
+                    }
                 }
                 // Modificado: Permite que usuários vejam OS que estão com eles, que já saíram deles, ou que pertencem às revendas permitidas
                 if (restrictByUser) {
@@ -11086,7 +11168,7 @@ function subscribeWorldCupRealtime(){
                     
                     const osRevenda = String(os.Revenda || '');
                     const inAllowedRevendas = allowedRevendas.includes(osRevenda);
-                    const ownerPermMatch = (Array.isArray(allowedOwners) && allowedOwners.length) ? allowedOwners.some(o => {
+                    const ownerPermMatch = (Array.isArray(allowedOwnersAll) && allowedOwnersAll.length) ? allowedOwnersAll.some(o => {
                         const on = normalizeNomeResponsavel(o);
                         return on === normalizeNomeResponsavel(escCalc) || (!!consultorNorm && consultorNorm.includes(on));
                     }) : false;
@@ -11328,7 +11410,7 @@ function getEscalonamento(tab, dias, revenda) {
             if (dias <= 10) {
                 if (tab === 'externa') {
                     if (['1', '2', '4'].includes(revendaNum)) return 'Isabelle';
-                    if (revendaNum === '3') return 'Ana Leya';
+                    if (revendaNum === '3') return 'Nayana';
                     return 'Isabelle';
                 }
                 if (tab === 'interna') {
