@@ -6511,7 +6511,7 @@
                 const isUsuario = !!(user && user.tipo_usuario === 'Usuário');
                 // Whitelist para acesso à aba Atualização
                 const nomeNorm = normalize(user && (user.nome_completo || user.usuario));
-                const UPDATE_WHITELIST = ['isabelle','ana leya','flavia','giovana','bruna','graziela','johnny','wanderley'];
+                const UPDATE_WHITELIST = ['isabelle','nayana','ana leya','flavia','giovana','bruna','graziela','johnny','wanderley'];
                 const canUseAtualizacao = UPDATE_WHITELIST.some(n => nomeNorm.includes(n));
 
                 // Obter referências para todas as abas
@@ -10895,14 +10895,19 @@ function subscribeWorldCupRealtime(){
             window.getUserEscLabel = function(nomeCompleto){
                 try {
                     const normalize = (str) => String(str || '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+                    const fullNorm = normalize(nomeCompleto);
+                    if (fullNorm.includes('isabelle')) return 'Isabelle';
+                    if (fullNorm.includes('nayana')) return 'Nayana';
+                    if (fullNorm.includes('ana leya') || fullNorm.includes('ana leia')) return 'Ana Leya';
+                    if (fullNorm.includes('bruna')) return 'Bruna';
+                    if (fullNorm.includes('wanderley')) return 'Wanderley';
+                    if (fullNorm.includes('graziela')) return 'Graziela';
+                    if (fullNorm.includes('johnny')) return 'Johnny';
+                    if (fullNorm.includes('antonio gustavo') || fullNorm.includes('antônio gustavo')) return 'Antônio Gustavo';
+                    if (fullNorm.includes('giovana')) return 'Giovana';
+                    if (fullNorm.includes('flavia') || fullNorm.includes('flávia')) return 'Flávia';
                     const parts = String(nomeCompleto || '').trim().split(/\s+/);
-                    const first = parts[0] || '';
-                    const second = parts[1] || '';
-                    const two = `${first} ${second}`.trim();
-                    const twoNorm = normalize(two);
-                    if (twoNorm.startsWith('ana leya') || twoNorm.startsWith('ana leia')) return 'Ana Leya';
-                    if (twoNorm.startsWith('antonio gustavo') || twoNorm.startsWith('antônio gustavo')) return 'Antônio Gustavo';
-                    return first || '';
+                    return parts[0] || '';
                 } catch(_) { return String(nomeCompleto||'').split(/\s+/)[0] || ''; }
             }
         }
@@ -10985,14 +10990,24 @@ function subscribeWorldCupRealtime(){
             const restrictByUser = !!(currentUser && !(currentUser.is_admin || currentUser.tipo_usuario === 'Administrador') && currentUser.tipo_usuario !== 'Gestor' && !hasPerm && !ownerOverride && !escalonamento);
             const normalize = (str) => (str || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
             const getUserEscLabel = (nomeCompleto) => {
-                const parts = (nomeCompleto || '').trim().split(/\s+/);
-                const first = parts[0] || '';
-                const second = parts[1] || '';
-                const two = `${first} ${second}`.trim();
-                const twoNorm = normalize(two);
-                if (twoNorm.startsWith('ana leya')) return 'Ana Leya';
-                if (twoNorm.startsWith('antonio gustavo')) return 'Antônio Gustavo';
-                return first || '';
+                try {
+                    const fullNorm = normalize((nomeCompleto || ''));
+                    if (fullNorm.includes('isabelle')) return 'Isabelle';
+                    if (fullNorm.includes('nayana')) return 'Nayana';
+                    if (fullNorm.includes('ana leya') || fullNorm.includes('ana leia')) return 'Ana Leya';
+                    if (fullNorm.includes('bruna')) return 'Bruna';
+                    if (fullNorm.includes('wanderley')) return 'Wanderley';
+                    if (fullNorm.includes('graziela')) return 'Graziela';
+                    if (fullNorm.includes('johnny')) return 'Johnny';
+                    if (fullNorm.includes('antonio gustavo') || fullNorm.includes('antônio gustavo')) return 'Antônio Gustavo';
+                    if (fullNorm.includes('giovana')) return 'Giovana';
+                    if (fullNorm.includes('flavia') || fullNorm.includes('flávia')) return 'Flávia';
+                    const parts = (nomeCompleto || '').trim().split(/\s+/);
+                    return parts[0] || '';
+                } catch(_) {
+                    const parts = (nomeCompleto || '').trim().split(/\s+/);
+                    return parts[0] || '';
+                }
             };
             const userEscNorm = restrictByUser ? normalize(getUserEscLabel(currentUser?.nome_completo || '')) : '';
 
@@ -11000,6 +11015,19 @@ function subscribeWorldCupRealtime(){
             const allowedOwnersPerm = currentUser ? getOwnersPermittedForTab(currentUser, tab) : [];
             const userOwnLabel = getUserEscLabel(currentUser?.nome_completo || currentUser?.usuario || '');
             const allowedOwnersAll = [userOwnLabel].concat(Array.isArray(allowedOwnersPerm) ? allowedOwnersPerm : []);
+
+            // Regra específica: Nayana não vê Garantia (apenas Externa)
+            try {
+                const isAdminOrGestorGlobal = !!(currentUser && (currentUser.is_admin || currentUser.tipo_usuario === 'Administrador' || currentUser.tipo_usuario === 'Gestor'));
+                const userNormGlobal = normalizeNomeResponsavel((currentUser?.nome_completo || currentUser?.usuario || ''));
+                if (!isAdminOrGestorGlobal && userNormGlobal.includes('nayana') && String(tab).toLowerCase() === 'garantia') {
+                    return [];
+                }
+                // Regra específica: Giovana não vê Interna
+                if (!isAdminOrGestorGlobal && userNormGlobal.includes('giovana') && String(tab).toLowerCase() === 'interna') {
+                    return [];
+                }
+            } catch(_) {}
 
             return data.filter(os => {
                 // Filtro de revenda (múltipla seleção) e permissões por revenda
@@ -11011,8 +11039,23 @@ function subscribeWorldCupRealtime(){
                     if (!hasMatchingRevenda) {
                         return false;
                     }
+                    // Além de combinar a seleção, respeita permissões por revenda (não-admin/gestor)
+                    const isAdminOrGestorSel = !!(currentUser && (currentUser.is_admin || currentUser.tipo_usuario === 'Administrador' || currentUser.tipo_usuario === 'Gestor'));
+                    if (!isAdminOrGestorSel && Array.isArray(allowedRevendas) && allowedRevendas.length > 0) {
+                        if (!allowedRevendas.includes(osRevenda)) return false;
+                    }
+                    // Restrição fixa: Nayana só vê Externa da revenda 3
+                    const userNormSel = normalizeNomeResponsavel((currentUser?.nome_completo || currentUser?.usuario || ''));
+                    if (!isAdminOrGestorSel && userNormSel.includes('nayana') && String(tab).toLowerCase()==='externa') {
+                        if (osRevenda !== '3') return false;
+                    }
                 } else {
-                    // Sem seleção de revenda: trata como "Todas" (não restringe por revenda)
+                    const isAdminOrGestor = !!(currentUser && (currentUser.is_admin || currentUser.tipo_usuario === 'Administrador' || currentUser.tipo_usuario === 'Gestor'));
+                    const userNorm = normalizeNomeResponsavel((currentUser?.nome_completo || currentUser?.usuario || ''));
+                    if (!isAdminOrGestor && userNorm.includes('nayana') && String(tab).toLowerCase()==='externa') {
+                        const osRevenda = String(os.Revenda || '');
+                        if (osRevenda !== '3') return false;
+                    }
                 }
                 
                 if (nroOs && (os['Numero OS'] || '').toString().toLowerCase() !== nroOs.toLowerCase()) return false;
